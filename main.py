@@ -809,6 +809,10 @@ def shedule_surgery(hospitalization_id=None):
     if 'minutes' not in payload:
         response = {'status': StatusCodes['api_error'], 'errors': 'minutes is required!'}
         return flask.jsonify(response)
+    if hospitalization_id is None:
+        if 'final_date' not in payload:
+            response = {'status': StatusCodes['api_error'], 'errors': 'final_date is required!'}
+            return flask.jsonify(response)
     
     #
     # SQL query
@@ -869,6 +873,7 @@ def shedule_surgery(hospitalization_id=None):
 
         # Hospitalization_id is not provided, create a hospitalization
         if hospitalization_id is None:
+            logger.debug(f'POST /dbproj/surgery - creating hospitalization..')
             # Verify if nurse is a "HOSPITALIZACOES" nurse
             statement =  """
                 SELECT nc.category
@@ -878,12 +883,13 @@ def shedule_surgery(hospitalization_id=None):
                 WHERE e.person_id = %s AND nc.category = 'HOSPITALIZACOES';
             """
             values = (nurse_responsible_id, )
-
             cur.execute(statement, values)
 
-            result = cur.fetchone()[0]
+            result = cur.fetchone()
             if result is None:
-                raise Exception('Nurse is not a valid nurse!')
+                raise Exception(f'Responsible nurse {nurse_responsible_id} is not a valid nurse!')
+            
+            logger.debug(f'POST /dbproj/surgery - responsible nurse is valid')
             
             # Query to generate the hospitalization room
             statement = """
@@ -896,15 +902,19 @@ def shedule_surgery(hospitalization_id=None):
             if room is None:
                 raise Exception('No rooms available for hospitalization!')
             
+            logger.debug(f'POST /dbproj/surgery - room {room} available')
+            
             # Query to insert the hospitalization
             statement = """
                 INSERT INTO hospitalizations (start_date, final_date, room, assistant_id, nurse_id) 
                     VALUES (%s, %s, %s, %s, %s) RETURNING hosp_id;
             """
-            values = (payload['date'], payload['date'], room, jwt_token['user_id'], nurse_responsible_id)
-            
+            values = (payload['date'], payload['final_date'], room, jwt_token['user_id'], nurse_responsible_id)
             cur.execute(statement, values)
+
             hospitalization_id = cur.fetchone()[0]
+            if hospitalization_id is None:
+                raise Exception('Error creating hospitalization!')
 
             logger.debug(f'POST /dbproj/surgery - hospitalization created')
 
@@ -939,9 +949,9 @@ def shedule_surgery(hospitalization_id=None):
 
             cur.execute(statement, values)
 
-            result = cur.fetchone()[0]
-            if result != 'CIRURGIAS':
-                raise Exception('Nurse is not a valid nurse!')
+            result = cur.fetchone()
+            if result is None:
+                raise Exception(f'Nurse {nurse_id} is not a valid nurse!')
             
 
             # Verificar se o role existe na tabela de roles
@@ -1001,16 +1011,19 @@ def shedule_surgery(hospitalization_id=None):
         response = {'status': StatusCodes['success'], 'results': surgery_id} 
     
     except (Exception, psycopg2.DatabaseError) as error:
-        logger.error(f'POST dproj/appointment - error: {error}')
-        response = {'status': StatusCodes['internal_error'], 'errors': str(error), 'results': None}
-
         # an error occurred, rollback
         conn.rollback()
+
+        logger.error(f'POST dproj/surgery - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': str(error), 'results': None}
 
     finally:
         if conn is not None:
             conn.close()
-    return  
+    
+    return  flask.jsonify(response)
 
 ##
 ## See Appointments
