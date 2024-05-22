@@ -1,9 +1,10 @@
 import flask
 import logging
 import psycopg2
-import time
 import jwt
 import secrets
+from dotenv import dotenv_values
+from cryptography.fernet import Fernet
 
 app = flask.Flask(__name__)
 
@@ -22,17 +23,33 @@ user_types = {
     'assistant': 4
 } # User types
 
+
 ##########################################################
 ## DATABASE ACCESS
 ##########################################################
 
 def db_connection():
+    #
+    # Decrypting the environment variables on .env file
+    #
+    
+    env_vars = dotenv_values(".env")
+
+    key = env_vars["KEY"].encode()
+    cipher_suite = Fernet(key)
+
+    decrypted_user = cipher_suite.decrypt(eval(env_vars["USER"])).decode()
+    decrypted_password = cipher_suite.decrypt(eval(env_vars["PASSWORD"])).decode()
+    decrypted_host = cipher_suite.decrypt(eval(env_vars["HOST"])).decode()
+    decrypted_port = cipher_suite.decrypt(eval(env_vars["PORT"])).decode()
+    decrypted_database = cipher_suite.decrypt(eval(env_vars["DATABASE"])).decode()
+
     db = psycopg2.connect(
-        user = 'postgres',
-        password = 'root',
-        host = '127.0.0.1',
-        port = '5432',
-        database = 'hospital'
+        user=decrypted_user,
+        password=decrypted_password,
+        host=decrypted_host,
+        port=decrypted_port,
+        database=decrypted_database
     )
     return db
 
@@ -53,6 +70,29 @@ def landing_page():
 
 ##
 ## Register Doctors
+##
+## Example of payload:
+##  POST http://localhost:8080/dbproj/register/doctor
+##  {
+##	    "name": "Rodrigo",
+##	    "cc": "741258963",
+##	    "address": "Vouzela",
+##	    "phone": "963245449",
+##	    "username": "rmsr2004",
+##	    "password": "1234",
+##	    "email": "rodrigomiguelsr2004@gmail.com",
+##	    "contract": {
+##		    "salary": 1200.00,
+##		    "start_date": "2024-12-21",
+##		    "final_date": "2025-12-21",
+##		    "ctype_id": "3"
+##	    },
+##	    "medical_license": {
+##		    "issue_date": "2024-12-21",
+##		    "expiration_date": "2025-12-21"
+##	    }
+##  }
+##
 ##
 @app.route('/dbproj/register/doctor', methods=['POST'])
 def add_doctor():
@@ -118,6 +158,8 @@ def add_doctor():
 
     conn = db_connection()
     cur = conn.cursor()
+    
+
 
     # Query to insert the doctor
     statement = """
@@ -161,6 +203,26 @@ def add_doctor():
 
 ##
 ## Register Nurses
+##
+## Example of payload:
+##  POST http://localhost:8080/dbproj/register/nurse
+##  {
+##	    "name": "Rodrigo",
+##	    "cc": "741358963",
+##	    "address": "Vouzela",
+##	    "phone": "983245449",
+##	    "username": "rr21",
+##	    "password": "12340",
+##	    "email": "rodrigo2004@gmail.com",
+##	    "contract": {
+##		    "salary": 1200.00,
+##		    "start_date": "2024-12-21",
+##		    "final_date": "2025-12-21",
+##		    "ctype_id": "3"
+##	    },
+##	    "categories": [1,2,3]
+##  }
+##
 ##
 @app.route('/dbproj/register/nurse', methods=['POST'])
 def add_nurse():
@@ -225,6 +287,7 @@ def add_nurse():
     
     conn = db_connection()
     cur = conn.cursor()
+    
 
     # Query to insert the nurse
     insert_statement = """
@@ -287,6 +350,25 @@ def add_nurse():
 
 ##
 ## Register Assistants
+##
+## Example of payload:
+##  POST http://localhost:8080/dbproj/register/assistant
+##  {
+##	    "name": "Rodrigo",
+##	    "cc": "741358923",
+##	    "address": "Vouzela",
+##	    "phone": "983225449",
+##	    "username": "rr2321",
+##	    "password": "12345",
+##	    "email": "rr213@gmail.com",
+##	    "contract": {
+##		    "salary": 1200.00,
+##		    "start_date": "2024-12-21",
+##		    "final_date": "2025-12-21",
+##		    "ctype_id": "3"
+##	    }
+##  }
+##
 ##
 @app.route('/dbproj/register/assistant', methods=['POST'])
 def add_assistant():
@@ -384,6 +466,19 @@ def add_assistant():
 
 ##
 ## Register Patients
+## 
+## Example of payload:
+##  POST http://localhost:8080/dbproj/register/patient
+##  {
+##	    "name": "Rodrigo",
+##	    "cc": "741358923",
+##	    "address": "Vouzela",
+##	    "phone": "983225449",
+##	    "username": "drmdas23",
+##	    "password": "12345",
+##	    "email": "rodrigosantosrmasd@gmail.com"
+##  }
+##
 ##
 @app.route('/dbproj/register/patient', methods=['POST'])
 def add_patient():
@@ -462,6 +557,14 @@ def add_patient():
 
 ##
 ## User Login
+## 
+## Example of payload:
+##  PUT http://localhost:8080/dbproj/user
+##  {
+##	    "username": "pedro",
+##	    "password": "senha24"
+##  }
+##
 ##
 @app.route('/dbproj/user', methods = ['PUT'])
 def login():
@@ -531,6 +634,21 @@ def login():
 
 ##
 ## Schedule Appointment
+##
+## Example of payload:
+##  POST http://localhost:8080/dbproj/appointment
+##  {
+##	    "doctor_id": "10",
+##	    "date": "2024-10-20",
+##	    "type": "GERAL",
+##	    "room": "3",
+##	    "hour": "15",
+##	    "minutes": "30",
+##	    "nurses": [
+##		    [12, "TRIAGEM"]
+##	    ]
+##  }
+##
 ##
 @app.route('/dbproj/appointment', methods = ['POST'])
 def schedule_appointment():
@@ -733,6 +851,27 @@ def schedule_appointment():
 
 ##
 ## Schedule Surgery
+##
+## Example of payload:
+##  POST http://localhost:8080/dbproj/surgery
+##  POST http://localhost:8080/dbproj/surgery/10
+##
+##  {
+##	    "patient_id": "10",
+##	    "doctor_id": "9",
+##	    "nurses": [
+##				[19, "RESPONSAVEL"],
+##				[13, "MONITOR"],
+##				[11, "ANESTESISTA"]
+##			],
+##	    "date": "2024-12-25",
+##	    "type": "ORTOPEDIA",
+##	    "room": "35",
+##	    "hour": "13",
+##	    "minutes": "00"
+##      "final_date": ... -> if hospitalization_id is provided
+##  }
+##
 ##
 @app.route('/dbproj/surgery', methods = ['POST'])
 @app.route('/dbproj/surgery/<hospitalization_id>', methods = ['POST'])
@@ -1028,6 +1167,9 @@ def shedule_surgery(hospitalization_id=None):
 ##
 ## See Appointments
 ##
+## GET http://localhost:8080/dbproj/appointments/<patient_id>
+##
+##
 @app.route('/dbproj/appointments/<patient_id>', methods = ['GET'])
 def see_appointments(patient_id=None):
     if patient_id is None:
@@ -1117,6 +1259,9 @@ def see_appointments(patient_id=None):
 
     return flask.jsonify(response)
 
+##
+## Validate Token
+##
 def validate_token(jwt_token):
     try:
         decoded_token = jwt.decode(jwt_token, secret_key, algorithms=['HS256'])
