@@ -7,21 +7,20 @@ import secrets
 
 app = flask.Flask(__name__)
 
+secret_key = secrets.token_hex(64)  # Generate a random secret key to encode/decode JWT tokens
+
 StatusCodes = {
     'success': 200,
     'api_error': 400,
     'internal_error': 500
-}
+} # Status codes for the API
 
 user_types = {
     'patient': 1,
     'doctor': 2,
     'nurse': 3, 
     'assistant': 4
-}
-
-secret_key = secrets.token_hex(64)
-
+} # User types
 
 ##########################################################
 ## DATABASE ACCESS
@@ -51,15 +50,430 @@ def landing_page():
         <br/>
     """
 
+
+##
+## Register Doctors
+##
+@app.route('/dbproj/register/doctor', methods=['POST'])
+def add_doctor():
+    logger.info('POST /dbproj/register/doctor')
+
+    payload = flask.request.get_json()
+
+    logger.debug(f'POST /dbproj/register/doctor - payload: {payload}')
+
+    #
+    # Validate payload.
+    #
+
+    if 'name' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'name value not in payload'}
+        return flask.jsonify(response)
+    if 'cc' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'cc value not in payload'}
+        return flask.jsonify(response)
+    if 'address' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'address value not in payload'}
+        return flask.jsonify(response)
+    if 'phone' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'phone value not in payload'}
+        return flask.jsonify(response)
+    if 'username' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'username value not in payload'}
+        return flask.jsonify(response)
+    if 'password' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'password value not in payload'}
+        return flask.jsonify(response)
+    if 'email' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'email value not in payload'}
+        return flask.jsonify(response)
+    if 'contract' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'contract details not in payload'}
+        return flask.jsonify(response)
+    if 'salary' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'salary value not in contract payload'}
+        return flask.jsonify(response)
+    if 'start_date' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'start date value not in contract payload'}
+        return flask.jsonify(response)
+    if 'final_date' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'final date value not in contract payload'}
+        return flask.jsonify(response)
+    if 'ctype_id' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'ctype_id value not in contract payload'}
+        return flask.jsonify(response)
+    if 'medical_license' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'medical_license details not in payload'}
+        return flask.jsonify(response)
+    if 'issue_date' not in payload['medical_license']:
+        response = {'status': StatusCodes['api_error'], 'results': 'issue_date value not in medical_license payload'}
+        return flask.jsonify(response)
+    if 'expiration_date' not in payload['medical_license']:
+        response = {'status': StatusCodes['api_error'], 'results': 'expiration_date value not in medical_license payload'}
+        return flask.jsonify(response)
+
+    #
+    # SQL query
+    #
+
+    conn = db_connection()
+    cur = conn.cursor()
+
+    # Query to insert the doctor
+    statement = """
+        INSERT INTO employees (person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, salary, start_date, final_date, ctype_id, person_type) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s); 
+
+        INSERT INTO doctors (person_id, ml_issue_date, ml_expiration_date) 
+                SELECT person_id, %s, %s FROM employees WHERE person_cc = %s
+        RETURNING person_id;
+    """
+    values = (payload['cc'], payload['name'], payload['address'], payload['phone'], payload['username'], payload['password'], 
+              payload['email'], payload['contract']['salary'], payload['contract']['start_date'], payload['contract']['final_date'], 
+              payload['contract']['ctype_id'], "2", payload['medical_license']['issue_date'], payload['medical_license']['expiration_date'],
+              payload['cc'])
+
+    try:
+        cur.execute(statement, values)
+
+        doctor_id = cur.fetchone()[0]
+        if doctor_id is None:
+            raise Exception('Error inserting doctor!')
+        
+        response = {'status': StatusCodes['success'], 'results': doctor_id}
+
+        conn.commit()
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        # an error occurred, rollback
+        conn.rollback()
+
+        logger.error(f'POST dbproj/register/doctor - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': str(error)}
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return flask.jsonify(response)
+
+##
+## Register Nurses
+##
+@app.route('/dbproj/register/nurse', methods=['POST'])
+def add_nurse():
+    logger.info('POST /dbproj/register/nurse')
+
+    payload = flask.request.get_json()
+
+    logger.debug(f'POST /dbproj/register/nurse - payload: {payload}')
+
+    #
+    # Validate payload.
+    #
+
+    if 'name' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'name value not in payload'}
+        return flask.jsonify(response)
+    if 'cc' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'cc value not in payload'}
+        return flask.jsonify(response)
+    if 'address' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'address value not in payload'}
+        return flask.jsonify(response)
+    if 'phone' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'phone value not in payload'}
+        return flask.jsonify(response)
+    if 'username' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'username value not in payload'}
+        return flask.jsonify(response)
+    if 'password' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'password value not in payload'}
+        return flask.jsonify(response)
+    if 'email' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'email value not in payload'}
+        return flask.jsonify(response)
+    if 'contract' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'contract details not in payload'}
+        return flask.jsonify(response)
+    if 'salary' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'salary value not in contract payload'}
+        return flask.jsonify(response)
+    if 'start_date' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'start date value not in contract payload'}
+        return flask.jsonify(response)
+    if 'final_date' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'final date value not in contract payload'}
+        return flask.jsonify(response)
+    if 'ctype_id' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'ctype_id value not in contract payload'}
+        return flask.jsonify(response)
+    if 'categories' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'categories values not in payload'}
+        return flask.jsonify(response)
+    if payload['categories'] == []:
+        response = {'status': StatusCodes['api_error'], 'results': 'categories values is empty'}
+        return flask.jsonify(response)
+    
+    categories = payload['categories']
+
+    #
+    # SQL query
+    #
+    
+    conn = db_connection()
+    cur = conn.cursor()
+
+    # Query to insert the nurse
+    insert_statement = """
+        INSERT INTO employees (person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, salary, start_date, final_date, ctype_id, person_type) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s ,%s);
+
+        INSERT INTO nurses (person_id) 
+        SELECT person_id FROM employees WHERE person_cc = %s RETURNING person_id;
+    """
+    values = (payload['cc'], payload['name'], payload['address'], payload['phone'], payload['username'], payload['password'], payload['email'], 
+              payload['contract']['salary'], payload['contract']['start_date'], payload['contract']['final_date'], payload['contract']['ctype_id'],
+              "3", payload['cc'])
+
+    try:
+        cur.execute(insert_statement, values)
+
+        nurse_id = cur.fetchone()[0]
+
+        if nurse_id is None:
+            raise Exception('Error inserting nurse!')
+        
+        # Queries to insert the nurse categories
+        for category_id in categories:
+            # Query to verify if the category exists
+            statement = """
+                SELECT category_id FROM nurse_categories WHERE category_id = %s;
+            """ 
+            values = (category_id, )
+            cur.execute(statement, values)
+
+            result = cur.fetchone()
+            if result is None:
+                raise Exception(f'Category {category_id} does not exist!')
+            
+            # Query to insert the nurse category
+            statement = """
+                INSERT INTO nurses_categories (nurse_id, category_id) VALUES (%s, %s);
+            """
+            values = (nurse_id, category_id)
+            cur.execute(statement, values)
+    
+        response = {'status': StatusCodes['success'], 'results': nurse_id}
+
+        conn.commit()
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        # an error occurred, rollback
+        conn.rollback()
+
+        logger.error(f'POST /dbproj/register/nurse - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': str(error)}
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return flask.jsonify(response)
+
+##
+## Register Assistants
+##
+@app.route('/dbproj/register/assistant', methods=['POST'])
+def add_assistant():
+    logger.info('POST /dbproj/register/assistant')
+
+    payload = flask.request.get_json()
+
+    logger.debug(f'POST /dbproj/register/assistant - payload: {payload}')
+
+    #
+    # Validate payload.
+    #
+
+    if 'name' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'name value not in payload'}
+        return flask.jsonify(response)
+    if 'cc' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'cc value not in payload'}
+        return flask.jsonify(response)
+    if 'address' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'address value not in payload'}
+        return flask.jsonify(response)
+    if 'phone' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'phone value not in payload'}
+        return flask.jsonify(response)
+    if 'username' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'username value not in payload'}
+        return flask.jsonify(response)
+    if 'password' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'password value not in payload'}
+        return flask.jsonify(response)
+    if 'email' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'email value not in payload'}
+        return flask.jsonify(response)
+    if 'contract' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'contract details not in payload'}
+        return flask.jsonify(response)
+    if 'salary' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'salary value not in contract payload'}
+        return flask.jsonify(response)
+    if 'start_date' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'start date value not in contract payload'}
+        return flask.jsonify(response)
+    if 'final_date' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'final date value not in contract payload'}
+        return flask.jsonify(response)
+    if 'ctype_id' not in payload['contract']:
+        response = {'status': StatusCodes['api_error'], 'results': 'ctype_id value not in contract payload'}
+        return flask.jsonify(response)
+
+    #
+    # SQL Query
+    #
+
+    conn = db_connection()
+    cur = conn.cursor()
+
+
+    # query to insert the assistant
+    statement = """
+        INSERT INTO employees (person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, salary, start_date, final_date, ctype_id, person_type) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        INSERT INTO assistants (person_id) 
+            SELECT person_id FROM employees WHERE person_cc = %s RETURNING person_id;
+    """
+    values = (payload['cc'], payload['name'], payload['address'], payload['phone'], payload['username'], payload['password'], payload['email'], 
+              payload['contract']['salary'], payload['contract']['start_date'], payload['contract']['final_date'], payload['contract']['ctype_id'],
+              "4", payload['cc'])
+
+    try:
+        cur.execute(statement, values)
+        
+        assistant_id = cur.fetchone()[0]
+        if assistant_id is None:
+            raise Exception('Error inserting assistant!')
+        
+        response = {'status': StatusCodes['success'], 'results': assistant_id}
+
+        conn.commit()
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        # an error occurred, rollback
+        conn.rollback()
+
+        logger.error(f'POST /dbproj/register/assistant - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': str(error)}
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return flask.jsonify(response)
+
+##
+## Register Patients
+##
+@app.route('/dbproj/register/patient', methods=['POST'])
+def add_patient():
+    logger.info('POST /dbproj/register/patient')
+
+    payload = flask.request.get_json()
+
+    logger.debug(f'POST /dbproj/register/patient - payload: {payload}')
+
+    #
+    # Validate payload.
+    #
+
+    if 'name' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'name value not in payload'}
+        return flask.jsonify(response)
+    if 'cc' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'cc value not in payload'}
+        return flask.jsonify(response)
+    if 'address' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'address value not in payload'}
+        return flask.jsonify(response)
+    if 'phone' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'phone value not in payload'}
+        return flask.jsonify(response)
+    if 'username' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'username value not in payload'}
+        return flask.jsonify(response)
+    if 'password' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'password value not in payload'}
+        return flask.jsonify(response)
+    if 'email' not in payload:
+        response = {'status': StatusCodes['api_error'], 'results': 'email value not in payload'}
+        return flask.jsonify(response)
+
+    #
+    # SQL Query
+    #
+
+    conn = db_connection()
+    cur = conn.cursor()
+
+    # query to insert the patient
+    statement = """
+        INSERT INTO patients (person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, person_type) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING person_id;
+    """
+    values = (payload['cc'], payload['name'], payload['address'], payload['phone'], payload['username'], payload['password'], payload['email'],
+              "1")
+
+    try:
+        cur.execute(statement, values)
+        
+        patient_id = cur.fetchone()[0]
+        if patient_id is None:
+            raise Exception('Error inserting patient!')
+        
+        response = {'status': StatusCodes['success'], 'results': patient_id}
+
+        conn.commit()
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        # an error occurred, rollback
+        conn.rollback()
+
+        logger.error(f'POST /dbproj/register/patient - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': str(error)}
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return flask.jsonify(response)
+
 ##
 ## User Login
 ##
 @app.route('/dbproj/user', methods = ['PUT'])
 def login():
     logger.info('PUT /dbproj/user')
+
     payload = flask.request.get_json()
 
     logger.debug(f'PUT /dbproj/user - payload: {payload}')
+
+    #
+    # Validate payload.
+    #
 
     if 'username' not in payload:
         response = {'status': StatusCodes['api_error'], 'errors': 'username is required!'}
@@ -455,7 +869,6 @@ def shedule_surgery(hospitalization_id=None):
 
         # Hospitalization_id is not provided, create a hospitalization
         if hospitalization_id is None:
-
             # Verify if nurse is a "HOSPITALIZACOES" nurse
             statement =  """
                 SELECT nc.category
@@ -469,14 +882,26 @@ def shedule_surgery(hospitalization_id=None):
             cur.execute(statement, values)
 
             result = cur.fetchone()[0]
-            if result != 'HOSPITALIZACOES':
+            if result is None:
                 raise Exception('Nurse is not a valid nurse!')
             
+            # Query to generate the hospitalization room
+            statement = """
+                SELECT get_first_available_room(%s);
+            """
+            values = (payload['date'], )
+            cur.execute(statement, values)
+
+            room = cur.fetchone()[0]
+            if room is None:
+                raise Exception('No rooms available for hospitalization!')
+            
+            # Query to insert the hospitalization
             statement = """
                 INSERT INTO hospitalizations (start_date, final_date, room, assistant_id, nurse_id) 
                     VALUES (%s, %s, %s, %s, %s) RETURNING hosp_id;
             """
-            values = (payload['date'], payload['date'], payload['room'], jwt_token['user_id'], nurse_responsible_id)
+            values = (payload['date'], payload['date'], room, jwt_token['user_id'], nurse_responsible_id)
             
             cur.execute(statement, values)
             hospitalization_id = cur.fetchone()[0]
