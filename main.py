@@ -179,13 +179,14 @@ def schedule_appointment():
     
     # Query to verify if the doctor exists and if the doctor type given corresponds to real doctor type
     statement =  """
-        SELECT e.person_id, e.person_name, specialization
-        FROM specialisations_doctors AS sd
-        JOIN specialisations AS s ON s.spec_id = sd.spec_id
-        JOIN employees as e ON e.person_id = sd.doctor_id
-        WHERE person_id = %s AND specialization = %s;
+        SELECT e.person_id, e.person_name, s.specialization
+        FROM employees AS e
+        LEFT JOIN specialisations_doctors AS sd ON e.person_id = sd.doctor_id
+        LEFT JOIN specialisations AS s ON s.spec_id = sd.spec_id
+        WHERE e.person_type = 2 AND e.person_id = %s AND ( %s = 'GERAL' AND sd.spec_id IS NULL 
+                                                           OR s.specialization = %s);
     """
-    values = (payload['doctor_id'], payload['type'])
+    values = (payload['doctor_id'], payload['type'], payload['type'])
 
     try:
         cur.execute(statement, values)
@@ -193,7 +194,6 @@ def schedule_appointment():
         result = cur.fetchone()
         if result is None:
             raise Exception('Doctor does not exist or the type of appointment does not correspond to the doctor specialisation!')
-
 
         # Query to verify if the doctor is available
         statement =  """
@@ -303,11 +303,13 @@ def schedule_appointment():
         response = {'status': StatusCodes['success'], 'results': appointment_id}
 
     except (Exception, psycopg2.DatabaseError) as error:
-        logger.error(f'POST dproj/appointment - error: {error}')
-        response = {'status': StatusCodes['internal_error'], 'errors': str(error), 'results': None}
-
         # an error occurred, rollback
         conn.rollback()
+
+        logger.error(f'POST dproj/appointment - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': error, 'results': None}
 
     finally:
         if conn is not None:
