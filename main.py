@@ -158,13 +158,13 @@ def add_doctor():
 
     conn = db_connection()
     cur = conn.cursor()
-    
 
-
+    conn.autocommit = False
+        
     # Query to insert the doctor
     statement = """
         INSERT INTO employees (person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, salary, start_date, final_date, ctype_id, person_type) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s); 
+                VALUES (%s, %s, %s, %s, %s, encrypt(%s, 'my_secret_key'), %s, %s, %s, %s, %s, %s); 
 
         INSERT INTO doctors (person_id, ml_issue_date, ml_expiration_date) 
                 SELECT person_id, %s, %s FROM employees WHERE person_cc = %s
@@ -592,23 +592,27 @@ def login():
     conn = db_connection()
     cur = conn.cursor()
     
+
     statement =  """
-        SELECT person_type AS user_type, person_id AS user_id
-        FROM patients
-        WHERE person_username = %s AND person_password = %s
-        UNION
-        SELECT person_type AS user_type, person_id AS user_id
+        SELECT person_type, person_id, decrypt(person_password, 'my_secret_key') AS decrypted_password
         FROM employees
-        WHERE person_username = %s AND person_password = %s;
+        WHERE person_username = %s
+        UNION
+        SELECT person_type, person_id, decrypt(person_password, 'my_secret_key') AS decrypted_password
+        FROM patients
+        WHERE person_username = %s;
     """
-    values = (payload['username'], payload['password'], payload['username'], payload['password'])
+    values = (payload['username'], payload['username'])
 
     try:
         cur.execute(statement, values)
         result = cur.fetchone()
 
         if result:
-            user_type, user_id = result
+            user_type, user_id, decrypted_password = result
+
+            if decrypted_password != payload['password']:
+                raise Exception('Invalid password!')
             
             jwt_payload = { 'user_id': int(user_id), 'user_type': int(user_type)}
             jwt_token = jwt.encode(jwt_payload, secret_key, algorithm='HS256')
@@ -902,7 +906,7 @@ def shedule_surgery(hospitalization_id=None):
         response = {'status': StatusCodes['api_error'], 'errors': 'Invalid or Expirated token!'}
         return flask.jsonify(response)
 
-    # Verify if the user is a patient
+    # Verify if the user is a assistant
     if jwt_token['user_type'] != user_types['assistant']:
         response = {'status': StatusCodes['api_error'], 'errors': 'Only assistants can schedule appointments!'}
         return flask.jsonify(response)
@@ -963,12 +967,13 @@ def shedule_surgery(hospitalization_id=None):
 
     # Query to verify if the doctor exists and if the doctor type given corresponds to real doctor type
     statement =  """
-        SELECT d.person_id, e.person_name, s.specialization, ss.sub_spec 
+        SELECT d.ml_id, e.person_name, s.specialization, ss.sub_spec
         FROM doctors AS d
-        JOIN specialisations_doctors AS sd ON d.person_id = sd.doctor_id
+        JOIN employees AS e ON d.person_id = e.person_id
+        JOIN specialisations_doctors AS sd ON d.ml_id = sd.doctor_id
         JOIN specialisations AS s ON sd.spec_id = s.spec_id
-        JOIN sub_specialisations AS ss ON sd.spec_id = ss.spec_id
-        JOIN employees AS e ON e.person_id = sd.doctor_id
+        LEFT JOIN sub_specialisations_doctors AS ssd ON d.ml_id = ssd.doctor_id
+        LEFT JOIN sub_specialisations AS ss ON ssd.sub_spec_id = ss.sub_spec_id
         WHERE e.person_id = %s AND s.specialization = 'CIRURGIA' AND ss.sub_spec = %s;
     """
     values = (payload['doctor_id'], payload['type'])
@@ -1242,7 +1247,6 @@ def see_appointments(patient_id=None):
                 'room': row[7],
                 'status': row[8]
             }
-
             results.append(content)
         
         if results == []:
@@ -1251,6 +1255,81 @@ def see_appointments(patient_id=None):
         response = {'status': StatusCodes['success'], 'results': results}
     except (Exception, psycopg2.DatabaseError) as error:
         logger.error(f'GET /departments - error: {error}')
+        response = {'status': StatusCodes['internal_error'], 'errors': str(error)}
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return flask.jsonify(response)
+
+##
+## See Monthly Report
+##
+@app.route('/dbproj/report', methods=['GET'])
+def get_monthly_surgery_report():
+    logger.info('GET /dbproj/report')
+    
+    #
+    # Validate Authorization header
+    #
+
+    jwt_token = flask.request.headers.get('Authorization')
+    if not jwt_token:
+        response = {'status': StatusCodes['api_error'], 'errors': 'Authorization header is required!'}
+        return flask.jsonify(response)
+
+    jwt_token = validate_token(jwt_token)
+    if not jwt_token:
+        response = {'status': StatusCodes['api_error'], 'errors': 'Invalid or Expirated token!'}
+        return flask.jsonify(response)
+
+    # Verify if the user is a assistant
+    if jwt_token['user_type'] != user_types['assistant']:
+        response = {'status': StatusCodes['api_error'], 'errors': 'Only assistants can schedule appointments!'}
+        return flask.jsonify(response)
+
+    #
+    # SQL query
+    #    
+    conn = db_connection()
+    cur = conn.cursor()
+
+    # Query to get the number of surgeries per doctor in the last 12 months
+    statement = """
+        SELECT e.person_name AS doctor_name, COUNT(s.surgery_id) AS num_surgeries
+        FROM surgeries AS s
+        JOIN employees AS e ON s.doctor_id = e.person_id
+        WHERE s.surgery_date >= (CURRENT_DATE - INTERVAL '12 months') 
+            AND s.surgery_date <= CURRENT_DATE
+        GROUP BY e.person_name
+        ORDER BY num_surgeries DESC;
+    """
+
+    try:
+        cur.execute(statement)
+        rows = cur.fetchall()
+
+        logger.debug('GET /dbproj/report - parse')
+
+        results = []
+        for row in rows:
+            logger.debug(row)
+
+            content = {
+                'doctor_name': row[0],
+                'num_surgeries': row[1]
+            }
+
+            results.append(content)
+        
+        if results == []:
+            raise Exception('No surgeries found!')
+
+        response = {'status': StatusCodes['success'], 'report': results}
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        logger.error(f'GET /dbproj/report - error: {error}')
         response = {'status': StatusCodes['internal_error'], 'errors': str(error)}
 
     finally:
