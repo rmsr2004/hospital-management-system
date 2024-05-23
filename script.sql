@@ -1,3 +1,12 @@
+DO $$DECLARE
+    tabname RECORD;
+BEGIN
+    FOR tabname IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || tabname.tablename || ' CASCADE';
+    END LOOP;
+END$$;
+
+
 DROP TABLE IF EXISTS employees;
 DROP TABLE IF EXISTS patients;
 DROP TABLE IF EXISTS nurses;
@@ -36,7 +45,7 @@ CREATE TABLE employees (
 	person_address	 	VARCHAR(50) NOT NULL,
 	person_phone		VARCHAR(9) NOT NULL,
 	person_username		VARCHAR(15) NOT NULL,
-	person_password	 	VARCHAR(15) NOT NULL,
+	person_password	 	VARCHAR(150) NOT NULL,
 	person_email		VARCHAR(30),
 	person_type		 	INTEGER NOT NULL,
 	PRIMARY KEY(person_id)
@@ -49,7 +58,7 @@ CREATE TABLE patients (
 	person_address	 	VARCHAR(50) NOT NULL,
 	person_phone	 	VARCHAR(9) NOT NULL,
 	person_username 	VARCHAR(15) NOT NULL,
-	person_password		VARCHAR(15) NOT NULL,
+	person_password		VARCHAR(150) NOT NULL,
 	person_email	 	VARCHAR(30),
 	person_type	 		INTEGER NOT NULL,
 	PRIMARY KEY(person_id)
@@ -245,6 +254,12 @@ CREATE TABLE specialisations_doctors (
 	PRIMARY KEY(doctor_id)
 );
 
+CREATE TABLE sub_specialisations_doctors (
+	doctor_id       INTEGER,
+	sub_spec_id		BIGINT,
+	PRIMARY KEY(doctor_id,sub_spec_id)
+);
+
 ALTER TABLE employees ADD UNIQUE (person_cc, person_phone, person_username, person_password, person_email);
 ALTER TABLE employees ADD CONSTRAINT employees_fk1 FOREIGN KEY (ctype_id) REFERENCES contract_types(ctype_id);
 ALTER TABLE employees ADD CONSTRAINT constraint_0 CHECK (person_type >= 1 AND person_type <=4);
@@ -275,6 +290,8 @@ ALTER TABLE hospitalizations ADD CONSTRAINT hospitalizations_fk2 FOREIGN KEY (as
 ALTER TABLE hospitalizations ADD CONSTRAINT hospitalizations_fk3 FOREIGN KEY (nurse_id) REFERENCES nurses(person_id);
 ALTER TABLE payments ADD CONSTRAINT payments_fk1 FOREIGN KEY (bill_id) REFERENCES bills(bill_id);
 ALTER TABLE sub_specialisations ADD CONSTRAINT sub_specialisations_fk1 FOREIGN KEY (spec_id) REFERENCES specialisations(spec_id);
+ALTER TABLE sub_specialisations_doctors ADD CONSTRAINT doctors_specialisations_fk1 FOREIGN KEY (doctor_id) REFERENCES doctors(person_id);
+ALTER TABLE sub_specialisations_doctors ADD CONSTRAINT sub_specialisations_doctors_fk2 FOREIGN KEY (sub_spec_id) REFERENCES sub_specialisations(sub_spec_id);
 ALTER TABLE roles_appointments ADD CONSTRAINT roles_appointments_fk1 FOREIGN KEY (role_id) REFERENCES roles(role_id);
 ALTER TABLE roles_appointments ADD CONSTRAINT roles_appointments_fk2 FOREIGN KEY (app_id, patient_id, doctor_id) REFERENCES appointments(appointment_id, patient_id, doctor_id);
 ALTER TABLE roles_surgeries ADD CONSTRAINT roles_surgeries_fk1 FOREIGN KEY (role_id) REFERENCES roles(role_id);
@@ -452,6 +469,22 @@ INSERT INTO specialisations_doctors (spec_id, doctor_id) VALUES (6,6);
 INSERT INTO specialisations_doctors (spec_id, doctor_id) VALUES (7,7);
 INSERT INTO specialisations_doctors (spec_id, doctor_id) VALUES (8,8);
 INSERT INTO specialisations_doctors (spec_id, doctor_id) VALUES (9,9);
+
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (1,1);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (3,2);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (5,3);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (7,4);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (5,5);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (9,6);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (11,7);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (13,8);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (15,9);
+INSERT INTO sub_specialisations_doctors (sub_spec_id, doctor_id) VALUES (16,9);
+
+
+/*
+    
+*/
 
 /*
 	Inserir enfermeiras
@@ -851,7 +884,7 @@ BEGIN
 
 	-- Verifica se a hospitalização existe
 	IF NOT EXISTS (SELECT 1 FROM hospitalizations WHERE hospitalizations.hosp_id = NEW.hosp_id) THEN
-        RAISE EXCEPTION 'A hospitalização com o ID % não existe.', NEW.doctor_id;
+        RAISE EXCEPTION 'A hospitalização com o ID % não existe.', NEW.hosp_id;
     END IF;
     
     RETURN NEW;
@@ -905,8 +938,8 @@ CREATE OR REPLACE FUNCTION create_bill_before_hospitalization()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Insere uma nova linha na tabela bills
-    INSERT INTO bills (total_payment, number_payments, bill_status)
-    VALUES (250, 10, FALSE)
+    INSERT INTO bills (total_payment, bill_status)
+    VALUES (250, FALSE)
     RETURNING bill_id INTO NEW.bill_id;
     
     RETURN NEW;
@@ -916,15 +949,15 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_create_new_bill
 BEFORE INSERT ON hospitalizations
 FOR EACH ROW
-EXECUTE FUNCTION create_new_bill_before_hospitalization();
+EXECUTE FUNCTION create_bill_before_hospitalization();
 
 /* Trigger para criar uma nova fatura antes de uma consulta */
 CREATE OR REPLACE FUNCTION create_bill_before_appointment()
 RETURNS TRIGGER AS $$
 BEGIN
     -- Insere uma nova fatura na tabela bills
-    INSERT INTO bills (total_payment, number_payments, bill_status)
-    VALUES (50.0, 10, FALSE)
+    INSERT INTO bills (total_payment, bill_status)
+    VALUES (50.0, FALSE)
     RETURNING bill_id INTO NEW.bill_id;  -- Retorna o ID da fatura para a nova appointment
     
     RETURN NEW;
@@ -935,3 +968,28 @@ CREATE TRIGGER trigger_create_new_bill
 BEFORE INSERT ON appointments
 FOR EACH ROW
 EXECUTE FUNCTION create_bill_before_appointment();
+
+
+CREATE EXTENSION pgcrypto;
+
+CREATE OR REPLACE FUNCTION encrypt(input_text VARCHAR, encrypt_key VARCHAR)
+RETURNS VARCHAR AS $$
+DECLARE 
+    data VARCHAR;
+BEGIN
+ data := pgp_sym_encrypt(input_text, encrypt_key);
+ RETURN data;
+END;
+$$
+LANGUAGE plpgsql; 
+
+CREATE OR REPLACE FUNCTION decrypt(encrypted_text VARCHAR, decrypt_key VARCHAR)
+RETURNS VARCHAR AS $$
+DECLARE
+    data VARCHAR;
+BEGIN
+    data := pgp_sym_decrypt(encrypted_text::bytea, decrypt_key);
+    RETURN data;
+END;
+$$
+LANGUAGE plpgsql;
