@@ -524,3 +524,149 @@ BEGIN
     RETURN 'Prescription added successfully!';
 END;
 $$ LANGUAGE plpgsql;
+
+
+/* Trigger para validar um funcionário */
+CREATE OR REPLACE FUNCTION validate_employee_data()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Validate salary
+    IF NEW.salary <= 0 THEN
+        RAISE EXCEPTION 'Salary must be greater than 0';
+    END IF;
+
+	-- Validate start_date format
+    IF NEW.start_date::TEXT !~ '^\d{4}-\d{2}-\d{2}$' THEN
+        RAISE EXCEPTION 'Start date must be in the format YYYY-MM-DD';
+    END IF;
+    
+    -- Validate final_date format
+    IF NEW.final_date IS NOT NULL AND NEW.final_date::TEXT !~ '^\d{4}-\d{2}-\d{2}$' THEN
+        RAISE EXCEPTION 'Final date must be in the format YYYY-MM-DD';
+    END IF;
+
+    -- Validate final_date
+    IF NEW.final_date IS NOT NULL AND NEW.final_date <= NEW.start_date THEN
+        RAISE EXCEPTION 'Final date must be after the start date';
+    END IF;
+
+    -- Validate phone number
+    IF LENGTH(CAST(NEW.person_phone AS VARCHAR)) <> 9 THEN
+        RAISE EXCEPTION 'Phone number must be exactly 9 digits';
+    END IF;
+
+    -- Validate email format
+    IF NEW.person_email IS NOT NULL AND NEW.person_email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$' THEN
+        RAISE EXCEPTION 'Email format is invalid';
+    END IF;
+
+	-- Validate CC
+	IF LENGTH(CAST(NEW.person_cc AS VARCHAR)) <> 8 THEN
+		RAISE EXCEPTION 'CC must be exactly 8 digits';
+	END IF;
+
+	-- Validate Type
+	IF NEW.person_type < 2 AND NEW.person_type > 4 THEN
+		RAISE EXCEPTION 'Person type must be 1, 2 or 3';
+	END IF;
+
+	-- Validate lengths
+	IF LENGTH(NEW.person_name) > 20 THEN
+		RAISE EXCEPTION 'Person name length must be lower than 20';
+	END IF;
+	
+	IF LENGTH(NEW.person_username) > 15 THEN
+		RAISE EXCEPTION 'Person username length must be lower than 15';
+	END IF;
+		
+	IF LENGTH(NEW.person_name) > 20 THEN
+		RAISE EXCEPTION 'Person name length must be lower than 20';
+	END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER validate_employee
+BEFORE INSERT OR UPDATE ON employees
+FOR EACH ROW
+EXECUTE FUNCTION validate_employee_data();
+
+/* Trigger para validar um paciente */
+CREATE OR REPLACE FUNCTION validate_patient_data()
+RETURNS TRIGGER AS $$
+BEGIN
+
+    -- Validate phone number
+    IF LENGTH(NEW.person_phone) <> 9 THEN
+        RAISE EXCEPTION 'Phone number must be exactly 9 digits';
+    END IF;
+
+    -- Validate email format
+    IF NEW.person_email IS NOT NULL AND NEW.person_email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$' THEN
+        RAISE EXCEPTION 'Email format is invalid';
+    END IF;
+
+	-- Validate CC
+	IF LENGTH(CAST(NEW.person_cc AS VARCHAR)) <> 8 THEN
+		RAISE EXCEPTION 'CC must be exactly 8 digits';
+	END IF;
+
+	-- Validate Type
+	IF NEW.person_type < 2 AND NEW.person_type > 4 THEN
+		RAISE EXCEPTION 'Person type must be 1, 2 or 3';
+	END IF;
+
+	-- Validate lengths
+	IF LENGTH(NEW.person_name) > 20 THEN
+		RAISE EXCEPTION 'Person name length must be lower than 20';
+	END IF;
+	
+	IF LENGTH(NEW.person_username) > 15 THEN
+		RAISE EXCEPTION 'Person username length must be lower than 15';
+	END IF;
+		
+	IF LENGTH(NEW.person_name) > 20 THEN
+		RAISE EXCEPTION 'Person name length must be lower than 20';
+	END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER validate_patient
+BEFORE INSERT OR UPDATE ON patients
+FOR EACH ROW
+EXECUTE FUNCTION validate_patient_data();
+
+/* Trigger para validar a licença médica de um médico */
+CREATE OR REPLACE FUNCTION validate_medical_license_data()
+RETURNS TRIGGER AS $$
+BEGIN
+	-- Validate start_date format
+    IF NEW.ml_issue_date::TEXT !~ '^\d{4}-\d{2}-\d{2}$' THEN
+        RAISE EXCEPTION 'Issue date must be in the format YYYY-MM-DD';
+    END IF;
+    
+    -- Validate final_date format
+    IF NEW.ml_expiration_date IS NOT NULL AND NEW.ml_expiration_date::TEXT !~ '^\d{4}-\d{2}-\d{2}$' THEN
+        RAISE EXCEPTION 'Expiration date must be in the format YYYY-MM-DD';
+    END IF;
+
+    -- Validate final_date
+    IF NEW.ml_expiration_date IS NOT NULL AND NEW.ml_expiration_date <= NEW.ml_issue_date THEN
+        RAISE EXCEPTION 'Expiration date must be after the issue date';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER medical_license
+BEFORE INSERT OR UPDATE ON doctors
+FOR EACH ROW
+EXECUTE FUNCTION validate_medical_license_data();
+

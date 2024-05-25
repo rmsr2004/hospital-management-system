@@ -7,7 +7,7 @@ CREATE TABLE employees (
 	person_cc		 	BIGINT NOT NULL,
 	person_name		 	VARCHAR(20) NOT NULL,
 	person_address	 	VARCHAR(50) NOT NULL,
-	person_phone		VARCHAR(9) NOT NULL,
+	person_phone		VARCHAR(10) NOT NULL,
 	person_username		VARCHAR(15) NOT NULL,
 	person_password	 	VARCHAR(512) NOT NULL,
 	person_email		VARCHAR(30),
@@ -20,7 +20,7 @@ CREATE TABLE patients (
 	person_cc	 		BIGINT NOT NULL,
 	person_name	 		VARCHAR(20) NOT NULL,
 	person_address	 	VARCHAR(50) NOT NULL,
-	person_phone	 	VARCHAR(9) NOT NULL,
+	person_phone	 	VARCHAR(10) NOT NULL,
 	person_username 	VARCHAR(15) NOT NULL,
 	person_password		VARCHAR(512) NOT NULL,
 	person_email	 	VARCHAR(30),
@@ -75,14 +75,14 @@ CREATE TABLE appointments (
 
 CREATE TABLE prescriptions (
 	presc_id 				BIGSERIAL,
-	prescription_date		DATE NOT NULL,
+	presc_date				DATE NOT NULL,
+	presc_validity_date 	DATE NOT NULL,
 	PRIMARY KEY(presc_id)
 );
 
 CREATE TABLE medicines (
 	medication_id		BIGSERIAL,
 	medication	 		VARCHAR(20) NOT NULL,
-	dosage	 			FLOAT(8) NOT NULL,
 	PRIMARY KEY(medication_id)
 );
 
@@ -226,6 +226,25 @@ CREATE TABLE sub_specialisations_doctors (
 	PRIMARY KEY(doctor_id,sub_spec_id)
 );
 
+CREATE TABLE posologies (
+	posology_id 	BIGSERIAL,
+	dosage			INTEGER NOT NULL,
+	frequency		INTEGER NOT NULL,
+	PRIMARY KEY(posology_id)
+);
+
+CREATE TABLE posologies_medicines (
+	posology_id	 		BIGINT,
+	medication_id		BIGINT,
+	PRIMARY KEY(posology_id, medication_id)
+);
+
+CREATE TABLE posologies_prescriptions (
+	posology_id 	BIGINT,
+	presc_id 		BIGINT,
+	PRIMARY KEY(posology_id,presc_id)
+);
+
 ALTER TABLE employees ADD UNIQUE (person_cc, person_phone, person_username, person_password, person_email);
 ALTER TABLE employees ADD CONSTRAINT employees_fk1 FOREIGN KEY (ctype_id) REFERENCES contract_types(ctype_id);
 ALTER TABLE employees ADD CONSTRAINT constraint_0 CHECK (person_type >= 1 AND person_type <=4);
@@ -250,6 +269,10 @@ ALTER TABLE surgeries ADD CONSTRAINT surgeries_fk3 FOREIGN KEY (hosp_id) REFEREN
 ALTER TABLE surgeries ADD CONSTRAINT constraint_0 CHECK (surgery_status >= 0 AND surgery_status <=1);
 ALTER TABLE surgeries ADD CONSTRAINT constraint_1 CHECK (surgery_hour >= 0 AND surgery_hour <= 23);
 ALTER TABLE surgeries ADD CONSTRAINT constraint_2 CHECK (surgery_minutes >= 0 AND surgery_minutes <= 59);
+ALTER TABLE posologies_prescriptions ADD CONSTRAINT posologies_prescriptions_fk1 FOREIGN KEY (posology_id) REFERENCES posologies(posology_id);
+ALTER TABLE posologies_prescriptions ADD CONSTRAINT posologies_prescriptions_fk2 FOREIGN KEY (presc_id) REFERENCES prescriptions(presc_id);
+ALTER TABLE posologies_medicines ADD CONSTRAINT posologies_medicines_fk1 FOREIGN KEY (posology_id) REFERENCES posologies(posology_id);
+ALTER TABLE posologies_medicines ADD CONSTRAINT posologies_medicines_fk2 FOREIGN KEY (medication_id) REFERENCES medicines(medication_id);
 ALTER TABLE hospitalizations ADD UNIQUE (bill_id, nurse_id);
 ALTER TABLE hospitalizations ADD CONSTRAINT hospitalizations_fk1 FOREIGN KEY (bill_id) REFERENCES bills(bill_id);
 ALTER TABLE hospitalizations ADD CONSTRAINT hospitalizations_fk2 FOREIGN KEY (assistant_id) REFERENCES assistants(person_id);

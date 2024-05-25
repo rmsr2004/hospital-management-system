@@ -71,16 +71,16 @@ INSERT INTO nurse_categories (category) VALUES ('HOSPITALIZACOES');
 */
 INSERT INTO employees (salary, start_date, final_date, ctype_id, person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, person_type)
 VALUES
-    (10000.00, '2020-01-01', NULL, 1, 123456789, 'Carlos Mendes', 'Viseu', '123456789', 'carlos', encrypt('senha123', 'my_secret_key'), 'carlos@email.com', 2),
-    (9000.00, '2019-05-15', NULL, 1, 987654321, 'Ana Silva', 'Coimbra', '987654321', 'ana', encrypt('senha456', 'my_secret_key'), 'ana@email.com', 2),
-    (9500.00, '2020-03-10', NULL, 1, 456789123, 'Ricardo Oliveira', 'Lisboa', '456789123', 'ricardo', encrypt('senha789', 'my_secret_key'), 'ricardo@email.com', 2),
-    (8500.00, '2018-09-20', NULL, 1, 789123456, 'Marta Santos', 'Porto', '789123456', 'marta', encrypt('senha1011', 'my_secret_key'), 'marta@email.com', 2),
-    (8800.00, '2019-12-05', NULL, 1, 234567891, 'José Ferreira', 'Braga', '234567891', 'jose', encrypt('senha1213', 'my_secret_key'), 'jose@email.com', 2),
-    (9200.00, '2019-08-10', NULL, 1, 678912345, 'Sofia Almeida', 'Viseu', '678912345', 'sofia', encrypt('senha1415', 'my_secret_key'), 'sofia@email.com', 2),
-    (8700.00, '2020-04-25', NULL, 1, 345678912, 'Tiago Martins', 'Coimbra', '345678912', 'tiago', encrypt('senha1617', 'my_secret_key'), 'tiago@email.com', 2),
-    (9200.00, '2018-11-15', NULL, 1, 891234567, 'Manuel Pereira', 'Faro', '891234567', 'manuel', encrypt('senha1819', 'my_secret_key'), 'manuel@email.com', 2),
-	(10000.00, '2020-01-02', NULL, 1, 123436789, 'Carlos Meneses', 'Vila Real', '123356789', 'carlosm', encrypt('senha223', 'my_secret_key'), 'carlosm@email.com', 2),
-    (9000.00, '2019-05-16', NULL, 1, 987653321, 'Ana Carla', 'Aveiro', '987654324', 'anac', encrypt('senha426', 'my_secret_key'), 'anac@email.com', 2);
+    (10000.00, '2020-01-01', NULL, 1, 12345789, 'Carlos Mendes', 'Viseu', '123452678', 'carlos', encrypt('senha123', 'my_secret_key'), 'carlos@email.com', 2),
+    (9000.00, '2019-05-15', NULL, 1, 98765321, 'Ana Silva', 'Coimbra', '987654322', 'ana', encrypt('senha456', 'my_secret_key'), 'ana@email.com', 2),
+    (9500.00, '2020-03-10', NULL, 1, 45679123, 'Ricardo Oliveira', 'Lisboa', '452678923', 'ricardo', encrypt('senha789', 'my_secret_key'), 'ricardo@email.com', 2),
+    (8500.00, '2018-09-20', NULL, 1, 78923456, 'Marta Santos', 'Porto', '789123526', 'marta', encrypt('senha1011', 'my_secret_key'), 'marta@email.com', 2),
+    (8800.00, '2019-12-05', NULL, 1, 23567891, 'José Ferreira', 'Braga', '234578291', 'jose', encrypt('senha1213', 'my_secret_key'), 'jose@email.com', 2),
+    (9200.00, '2019-08-10', NULL, 1, 68912345, 'Sofia Almeida', 'Viseu', '678123245', 'sofia', encrypt('senha1415', 'my_secret_key'), 'sofia@email.com', 2),
+    (8700.00, '2020-04-25', NULL, 1, 45678912, 'Tiago Martins', 'Coimbra', '456728912', 'tiago', encrypt('senha1617', 'my_secret_key'), 'tiago@email.com', 2),
+    (9200.00, '2018-11-15', NULL, 1, 89234567, 'Manuel Pereira', 'Faro', '812345267', 'manuel', encrypt('senha1819', 'my_secret_key'), 'manuel@email.com', 2),
+	(10000.00, '2020-01-02', NULL, 1, 13436789, 'Carlos Meneses', 'Vila Real', '132356789', 'carlosm', encrypt('senha223', 'my_secret_key'), 'carlosm@email.com', 2),
+    (9000.00, '2019-05-16', NULL, 1, 97653321, 'Ana Carla', 'Aveiro', '987543224', 'anac', encrypt('senha426', 'my_secret_key'), 'anac@email.com', 2);
 
 
 /*
@@ -88,17 +88,17 @@ VALUES
 */
 INSERT INTO employees (salary, start_date, final_date, ctype_id, person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, person_type)
 VALUES
-    (3500.00, '2019-03-20', NULL, 2, 111222333, 'Maria Oliveira', 'Castelo Branco', '111222333', 'maria', encrypt('senha21', 'my_secret_key'), 'maria@email.com', 3),
-    (3400.00, '2020-02-10', NULL, 2, 444555666, 'Joana Santos', 'Santarem', '444555666', 'joana', encrypt('senha22', 'my_secret_key'), 'joana@email.com', 3),
-    (3600.00, '2018-08-15', NULL, 2, 777888999, 'Ana Costa', 'Beja', '777888999', 'ana_c', encrypt('senha23', 'my_secret_key'), 'ana_c@email.com', 3);
+    (3500.00, '2019-03-20', NULL, 2, 11222333, 'Maria Oliveira', 'Castelo Branco', '111222333', 'maria', encrypt('senha21', 'my_secret_key'), 'maria@email.com', 3),
+    (3400.00, '2020-02-10', NULL, 2, 44555666, 'Joana Santos', 'Santarem', '444552566', 'joana', encrypt('senha22', 'my_secret_key'), 'joana@email.com', 3),
+    (3600.00, '2018-08-15', NULL, 2, 77888999, 'Ana Costa', 'Beja', '777882899', 'ana_c', encrypt('senha23', 'my_secret_key'), 'ana_c@email.com', 3);
 
 /*
 	Inserir dados na tabela employees para o assistente
 */
 INSERT INTO employees (salary, start_date, final_date, ctype_id, person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, person_type)
 VALUES
-    (2000.00, '2017-12-01', NULL, 2, 999888777, 'Pedro Rodrigues', 'Coimbra', '999888777', 'pedro', encrypt('senha24', 'my_secret_key'), 'pedro@email.com', 4),
-	(3000.00, '2017-12-02', NULL, 2, 999888277, 'Rodrigo Rodrigues', 'Viseu', '999882777', 'rodrigo', encrypt('senha25', 'my_secret_key'), 'rrodrigues@email.com', 4);
+    (2000.00, '2017-12-01', NULL, 2, 99888777, 'Pedro Rodrigues', 'Coimbra', '999828777', 'pedro', encrypt('senha24', 'my_secret_key'), 'pedro@email.com', 4),
+	(3000.00, '2017-12-02', NULL, 2, 99888277, 'Rodrigo Rodrigues', 'Viseu', '999822777', 'rodrigo', encrypt('senha25', 'my_secret_key'), 'rrodrigues@email.com', 4);
 
 /*
 	Inserir médicos
@@ -195,20 +195,20 @@ VALUES ((SELECT person_id FROM employees WHERE person_name = 'Rodrigo Rodrigues'
 */
 INSERT INTO patients (person_cc, person_name, person_address, person_phone, person_username, person_password, person_email, person_type)
 VALUES
-    (123456789, 'João Silva', 'Viana do Castelo', '111222333', 'joao', encrypt('senha123', 'my_secret_key'), 'joao@email.com', 1),
-    (987654321, 'Ana Sousa', 'Leiria', '444555666', 'ana', encrypt('senha456', 'my_secret_key'), 'ana@email.com', 1),
-    (456789123, 'Carlos Santos', 'Lisboa', '777888999', 'carlos', encrypt('senha789', 'my_secret_key'), 'carlos@email.com', 1),
-    (789123456, 'Marta Ferreira', 'Santarem', '101112131', 'marta', encrypt('senha1011', 'my_secret_key'), 'marta@email.com', 1),
-    (234567891, 'Pedro Almeida', 'Viseu', '314151617', 'pedromaria', encrypt('senha1213', 'my_secret_key'), 'pedromaria@email.com', 1),
-    (678912345, 'Sofia Costa', 'Aveiro', '181920212', 'sofia', encrypt('senha1415', 'my_secret_key'), 'sofia@email.com', 1),
-    (345678912, 'Rita Oliveira', 'Coimbra', '222324252', 'rita', encrypt('senha1617', 'my_secret_key'), 'rita@email.com', 1),
-    (891234567, 'Hugo Martins', 'Beja', '262728293', 'hugo', encrypt('senha1819', 'my_secret_key'), 'hugo@email.com', 1);
+    (12345789, 'João Silva', 'Viana do Castelo', '111222333', 'joao', encrypt('senha123', 'my_secret_key'), 'joao@email.com', 1),
+    (98764321, 'Ana Sousa', 'Leiria', '444555666', 'ana', encrypt('senha456', 'my_secret_key'), 'ana@email.com', 1),
+    (45689123, 'Carlos Santos', 'Lisboa', '777888999', 'carlos', encrypt('senha789', 'my_secret_key'), 'carlos@email.com', 1),
+    (78123456, 'Marta Ferreira', 'Santarem', '101112131', 'marta', encrypt('senha1011', 'my_secret_key'), 'marta@email.com', 1),
+    (24567891, 'Pedro Almeida', 'Viseu', '314151617', 'pedromaria', encrypt('senha1213', 'my_secret_key'), 'pedromaria@email.com', 1),
+    (78912345, 'Sofia Costa', 'Aveiro', '181920212', 'sofia', encrypt('senha1415', 'my_secret_key'), 'sofia@email.com', 1),
+    (45678912, 'Rita Oliveira', 'Coimbra', '222324252', 'rita', encrypt('senha1617', 'my_secret_key'), 'rita@email.com', 1),
+    (91234567, 'Hugo Martins', 'Beja', '262728293', 'hugo', encrypt('senha1819', 'my_secret_key'), 'hugo@email.com', 1);
 
 /*
     Inserir medicamentos
 */
-INSERT INTO medicines(medication, dosage) VALUES ('BRUFFEN', 330);
-INSERT INTO medicines(medication, dosage) VALUES ('PARACETAMOL', 500);
+INSERT INTO medicines(medication) VALUES ('BRUFFEN');
+INSERT INTO medicines(medication) VALUES ('PARACETAMOL');
 
 INSERT INTO probabilities(prob) VALUES (37);
 INSERT INTO probabilities(prob) VALUES (50);

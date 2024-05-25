@@ -301,6 +301,14 @@
 				"url": "http://localhost:8080/dbproj/report"
 			},
 			"response": []
+		},
+		{
+			"name": "GET DAILY SUMMARY",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
 		}
 	],
 	"variable": [

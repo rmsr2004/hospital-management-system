@@ -1198,79 +1198,50 @@ def get_prescriptions(person_id):
 
     # Query to get prescriptions
     statement = """
-        SELECT m.dosage, m.medication, pr.prob, s.side_effect
-        FROM appointments_prescriptions AS ap
-        JOIN prescriptions AS pres ON ap.presc_id = pres.presc_id
-        JOIN prescriptions_medicines AS pm ON pres.presc_id = pm.presc_id
-        JOIN medicines AS m ON pm.medication_id = m.medication_id
-        JOIN side_effects_medicines AS sem ON m.medication_id = sem.medication_id
-        JOIN side_effects AS s ON sem.side_effect_id = s.side_effect_id
-        JOIN probabilities AS pr ON s.prob_id = pr.prob_id
-        WHERE ap.patient_id = %s;
+        SELECT * FROM (
+            (SELECT p.presc_id, p.presc_validity_date, pos.dosage, pos.frequency, m.medication
+            FROM prescriptions AS p
+            JOIN posologies_prescriptions AS pp ON p.presc_id = pp.presc_id
+            JOIN posologies AS pos ON pp.posology_id = pos.posology_id
+            JOIN posologies_medicines AS pm ON pos.posology_id = pm.posology_id
+            JOIN medicines AS m ON pm.medication_id = m.medication_id
+            JOIN appointments_prescriptions AS ap ON ap.presc_id = p.presc_id
+            WHERE ap.patient_id = 1)
+
+            UNION
+
+            (SELECT p.presc_id, p.presc_validity_date, pos.dosage, pos.frequency, m.medication
+            FROM prescriptions AS p
+            JOIN posologies_prescriptions AS pp ON p.presc_id = pp.presc_id
+            JOIN posologies AS pos ON pp.posology_id = pos.posology_id
+            JOIN posologies_medicines AS pm ON pos.posology_id = pm.posology_id
+            JOIN medicines AS m ON pm.medication_id = m.medication_id
+            JOIN hospitalizations_prescriptions AS hp ON p.presc_id = hp.presc_id
+            JOIN hospitalizations AS h ON hp.hosp_id = h.hosp_id
+            JOIN surgeries AS s ON s.hosp_id = h.hosp_id
+            WHERE s.patient_id = 1)
+        )
+        ORDER BY presc_id ASC;
     """
-    values = (person_id, )
+    values = (person_id, person_id)
 
     try:
         cur.execute(statement, values)
         prescriptions = cur.fetchall()
 
-        if prescriptions:
-            response = {
-                'status': StatusCodes['success'],
-                'results': [
-                    {
-                        'dosage': pres[0],
-                        'medication': pres[1],
-                        'prob': pres[2],
-                        'side_effect': pres[3]
-                    } for pres in prescriptions
-                ]
+        if prescriptions == []:
+            raise Exception('No prescriptions found!')
+        
+        results = []
+        for prescription in prescriptions:
+            content = {
+                'prescription_id': prescription[0],
+                'validity_date': prescription[1],
+                'posology': [{ 'dosage': prescription[2], 'frequency': prescription[3], 'medication': prescription[4]}]
             }
-        else:
-            statement = """
-                SELECT hosp_id FROM surgeries WHERE patient_id = %s
-            """
-            values = (person_id, )
-            cur.execute(statement, values)
-
-            result = cur.fetchone()
-            hosp_id = result[0]
-            if result:
-                hosp_id = result[0]
-                
-                statement = """
-                    SELECT m.dosage, m.medication, pr.prob, s.side_effect
-                    FROM hospitalizations_prescriptions AS hp
-                    JOIN prescriptions AS pres ON hp.presc_id = pres.presc_id
-                    JOIN prescriptions_medicines AS pm ON pres.presc_id = pm.presc_id
-                    JOIN medicines AS m ON pm.medication_id = m.medication_id
-                    JOIN side_effects_medicines AS sem ON m.medication_id = sem.medication_id
-                    JOIN side_effects AS s ON sem.side_effect_id = s.side_effect_id
-                    JOIN probabilities AS pr ON s.prob_id = pr.prob_id
-                    WHERE hp.hosp_id = %s;
-                """
-                values = (hosp_id, )
-                cur.execute(statement, values)
-                
-                prescriptions = cur.fetchall()
-
-                if prescriptions:
-                    response = {
-                        'status': StatusCodes['success'],
-                        'results': [
-                            {
-                                'dosage': pres[0],
-                                'medication': pres[1],
-                                'prob': pres[2],
-                                'side_effect': pres[3]
-                            } for pres in prescriptions
-                        ]
-                    }
-                else:
-                    raise Exception('No prescriptions found for the given ID.')
-            else:
-                raise Exception('No prescriptions found for the given ID.')
-
+            results.append(content)
+    
+        response = {'status': StatusCodes['success'], 'results': results}
     except (Exception, psycopg2.DatabaseError) as error:
         # an error occurred, rollback
         conn.rollback()
@@ -1321,25 +1292,25 @@ def add_prescription():
     # Validate payload
     #
 
-    required_fields = ['prescriptions', 'medicines', 'type']
-    medicine_fields = ['medicine', 'dosage']
+    required_fields = ['type', 'event_id', 'validity_date', 'medicines']
+    medicine_fields = ['medicine', 'posology_dose', 'posology_frequency']
 
     for field in required_fields:
         if field not in payload:
             response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
             return flask.jsonify(response)
     
-    if prescription['type'] not in ['hospitalization', 'appointment']:
+    if payload['type'] not in ['hospitalization', 'appointment']:
         response = {'status': 'api_error', 'errors': 'Invalid type! Must be "hospitalization" or "appointment".'}
         return flask.jsonify(response)
 
-    prescription = payload['prescriptions'][0]
-    medicine = prescription['medicines'][0]
+    medicines = payload['medicines']
 
-    for field in medicine_fields:
-        if field not in medicine:
-            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
-            return flask.jsonify(response)
+    for medicine in medicines:
+        for field in medicine_fields:
+            if field not in medicine:
+                response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
+                return flask.jsonify(response)
     
     #
     # SQL query
@@ -1348,87 +1319,126 @@ def add_prescription():
     conn = db_connection()
     cur = conn.cursor()
 
-    # Query to insert the prescription
-    statement = """
-        INSERT INTO prescriptions DEFAULT VALUES RETURNING presc_id
-    """
-
+    # Query to verify if the event exists
+    if payload['type'] == 'hospitalization':
+        statement = """
+            SELECT hosp_id FROM hospitalizations WHERE hosp_id = %s;
+        """
+    else:
+        statement = """
+            SELECT appointment_id FROM appointments WHERE appointment_id = %s;
+        """
+    values = (payload['event_id'], )
+    
     try:
-        cur.execute(statement)
+        cur.execute(statement, values)
+        
+        event_id = cur.fetchone()
+        if event_id is None:
+            raise Exception('Event does not exist!')
+        
+        # Query to insert the prescription
+        statement = """
+            INSERT INTO prescriptions (presc_date, presc_validity_date) VALUES (CURRENT_DATE, %s) 
+            RETURNING presc_id;
+        """
+        values = (payload['validity_date'], )
+        cur.execute(statement, values)
+
         presc_id = cur.fetchone()[0]
+        if presc_id is None:
+            raise Exception('Error creating prescription!')
+    
 
-        # Query to check if medicine exists in medicines table
-        statement = """
-            SELECT medication_id FROM medicines WHERE medication = %s AND dosage = %s;
-        """
-        values = (medicine['medicine'], medicine['dosage'])
-        cur.execute(statement, values)
-
-        result = cur.fetchone()
-        if result is None:
-            raise Exception('The specified medicine does not exist!')
-
-        medication_id = result[0]
-
-        # Query to insert the medicine in prescriptions_medicines table
-        statement = """
-            INSERT INTO prescriptions_medicines (presc_id, medication_id) VALUES (%s, %s);
-        """
-        values = (presc_id, medication_id)
-        cur.execute(statement, values)
-
-        if prescription['type'] == 'hospitalization':
-            if 'doctor' not in prescription:
-                raise Exception('doctor is required for hospitalization type!')
-            
-            doctor_id = prescription['doctor']
-
-            # Query to find hosp_id using doctor_id from surgeries table
+        # Validate the medicines
+        for medicine in medicines:
             statement = """
-                SELECT hosp_id FROM surgeries WHERE doctor_id = %s;
+                SELECT medication_id FROM medicines WHERE medication = %s;
             """
-            values = (doctor_id, )
+            values = (medicine['medicine'], )
+            cur.execute(statement, values)
+
+            medication_id = cur.fetchone()
+            if medication_id is None:
+                raise Exception(f'Medicine {medicine["medicine"]} does not exist!')
+            
+            # Query to verify if posology exists
+            statement = """
+                SELECT posology_id FROM posologies WHERE dosage = %s AND frequency = %s;
+            """
+            values = (medicine['posology_dose'], medicine['posology_frequency'])
             cur.execute(statement, values)
 
             result = cur.fetchone()
             if result is None:
-                raise Exception('No hospitalization found for the given doctor!')
+                # Posology does not exist, insert it
+                statement = """
+                    INSERT INTO posologies (dosage, frequency) VALUES (%s, %s) RETURNING posology_id;
+                """
+                values = (medicine['posology_dose'], medicine['posology_frequency'])
+                cur.execute(statement, values)
+
+                posology_id = cur.fetchone()[0]
+            else:
+                posology_id = result[0]
             
-            hosp_id = result[0]
-            
+            # Insert current posology and medication in posologies_medicines table if does not exist
+            statement = """
+                SELECT posology_id FROM posologies_medicines WHERE posology_id = %s AND medication_id = %s;
+            """
+            values = (posology_id, medication_id)
+            cur.execute(statement, values)
+
+            result = cur.fetchone()
+            if result is None:
+                statement = """
+                    INSERT INTO posologies_medicines (posology_id, medication_id) VALUES (%s, %s);
+                """
+                values = (posology_id, medication_id)
+                cur.execute(statement, values)
+
+            # Insert the prescription and posology in posologies_prescriptions table
+            statement = """
+                INSERT INTO posologies_prescriptions (posology_id, presc_id) VALUES (%s, %s);
+            """
+            values = (posology_id, presc_id)
+            cur.execute(statement, values)
+
+            # Insert the medicine and prescription in prescriptions_medicines table
+            statement = """
+                INSERT INTO prescriptions_medicines (medication_id, presc_id) VALUES (%s, %s);
+            """
+            values = (medication_id, presc_id)
+            cur.execute(statement, values)
+        
+        # Query to insert the prescription in the appointments_prescriptions or hospitalizations_prescriptions
+        if payload['type'] == 'hospitalization':
             statement = """
                 INSERT INTO hospitalizations_prescriptions (hosp_id, presc_id) VALUES (%s, %s);
             """
-            values = (hosp_id, presc_id)
+            values = (event_id, presc_id)
             cur.execute(statement, values)
 
-        elif prescription['type'] == 'appointment':
-            if 'doctor' not in prescription:
-                raise Exception('Doctor is required for appointments type!')
-
-            doctor_id = prescription['doctor']
-
-            # Query to find patient_id using doctor_id from appointments table
+        elif payload['type'] == 'appointment':
+            # Query to get appointment_id, doctor_id and patient_id
             statement = """
-                SELECT patient_id FROM appointments WHERE doctor_id = %s;
+                SELECT appointment_id, doctor_id, patient_id FROM appointments WHERE appointment_id = %s;
             """
-            values = (doctor_id, )
+            values = (event_id, )
             cur.execute(statement, values)
 
-            result = cur.fetchone()
-
-            if result is None:
-                raise Exception('No appointment found for the given doctor!')
-            
-            patient_id = result[0]
+            app_id, doctor_id, patient_id = cur.fetchone()
 
             statement = """
-                SELECT add_appointment_prescription(%s, %s, %s);
+                INSERT INTO appointments_prescriptions (app_id, patient_id, doctor_id, presc_id) 
+                    VALUES (%s, %s, %s, %s);
             """
-            values = (patient_id, doctor_id, presc_id)
+            values = (app_id, patient_id, doctor_id, presc_id)
             cur.execute(statement, values)
 
+        # Commit the transaction
         conn.commit()
+
         response = {'status': StatusCodes['success'], 'results': presc_id}
 
     except (Exception, psycopg2.DatabaseError) as error:
@@ -1540,13 +1550,18 @@ def execute_payment(bill_id):
         response = {'status': StatusCodes['success'], 'results': remaining_amount}
 
     except (Exception, psycopg2.DatabaseError) as error:
-        logger.error(f'GET /departments - error: {error}')
-        response = {'status': StatusCodes['internal_error'], 'errors': str(error)}
+        # an error occurred, rollback
+        conn.rollback()
+
+        logger.error(f'POST dbproj/bills/f{bill_id} - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': error, 'results': None}
 
     finally:
         if conn is not None:
             conn.close()
-    
+
     return flask.jsonify(response)
 
 ##
@@ -1613,7 +1628,7 @@ def get_top_clients():
     """
 
     try:
-        cur.execute()
+        cur.execute(statement)
         top_clients = cur.fetchall()
 
         if top_clients == []:
@@ -1639,13 +1654,100 @@ def get_top_clients():
         response = {'status': StatusCodes['success'], 'results': results}
 
     except (Exception, psycopg2.DatabaseError) as error:
-        logger.error(f'GET /departments - error: {error}')
-        response = {'status': StatusCodes['internal_error'], 'errors': str(error)}
+        # an error occurred, rollback
+        conn.rollback()
+
+        logger.error(f'POST dbproj/top3 - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': error, 'results': None}
 
     finally:
         if conn is not None:
             conn.close()
+
+    return flask.jsonify(response)
+##
+##  Get Daily Summary
+##
+##
+@app.route('/dbproj/daily/<date>', methods=['GET'])
+def get_daily_summary(date):
+    logger.info(f'GET /dbproj/daily/{date}')
+
+    #
+    # Validate Authorization header
+    #
+
+    jwt_token = flask.request.headers.get('Authorization')
+    if not jwt_token:
+        response = {'status': StatusCodes['api_error'], 'errors': 'Authorization header is required!'}
+        return flask.jsonify(response)
+
+    jwt_token = validate_token(jwt_token)
+    if not jwt_token:
+        response = {'status': StatusCodes['api_error'], 'errors': 'Invalid or Expirated token!'}
+        return flask.jsonify(response)
+
+    # Verify if the user is a assistant
+    if jwt_token['user_type'] != user_types['assistant']:
+        response = {'status': StatusCodes['api_error'], 'errors': 'Only assistants can get top3 patients'}
+        return flask.jsonify(response)
     
+    # Parse the date string into year, month, and day
+    year, month, day = date.split('-')
+    year, month, day = int(year), int(month), int(day)
+
+    # Check if the date is valid
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        response = {'status': StatusCodes['api_error'], 'errors': 'Invalid date!'}
+        return flask.jsonify(response)
+
+    #
+    # SQL query
+    #
+
+    conn = db_connection()
+    cur = conn.cursor()
+
+    statement = """
+        SELECT 
+            ( SELECT COUNT(*) FROM surgeries WHERE surgeries_date = %s-%s-%s ) AS num_surgeries,
+            ( SELECT SUM(payment) FROM payments WHERE payment_date = %s-%s-%s) AS amount_spent,
+            ( SELECT COUNT(*) FROM prescriptions WHERE prescription_date = %s-%s-%s) AS num_prescriptions
+    """
+    values = (year, month, day, year, month, day, year, month, day)
+
+    try:
+        cur.execute(statement, values)
+        row = cur.fetchone()
+
+        if row is None:
+            raise Exception('No data found for the given date!')
+
+
+        response = {
+            'status': StatusCodes['success'], 
+            'results': {
+                'amount_spent': row[1], 
+                'surgeries': row[0], 
+                'prescriptions': row[2]
+            }
+        }
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        # an error occurred, rollback
+        conn.rollback()
+
+        logger.error(f'POST dbproj/daily/{date} - error: {error}')
+
+        error = str(error).split('\n')[0]
+        response = {'status': StatusCodes['internal_error'], 'errors': error, 'results': None}
+
+    finally:
+        if conn is not None:
+            conn.close()
+
     return flask.jsonify(response)
 
 ##
