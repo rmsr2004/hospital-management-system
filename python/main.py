@@ -6,7 +6,6 @@ import logging
 import psycopg2
 import jwt
 import secrets
-import json
 
 app = flask.Flask(__name__)
 
