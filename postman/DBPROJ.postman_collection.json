@@ -288,6 +288,14 @@
 			"response": []
 		},
 		{
+			"name": "GET DAILY SUMMARY",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
 			"name": "SEE MONTHLY REPORT",
 			"request": {
 				"method": "GET",
@@ -299,14 +307,6 @@
 					}
 				],
 				"url": "http://localhost:8080/dbproj/report"
-			},
-			"response": []
-		},
-		{
-			"name": "GET DAILY SUMMARY",
-			"request": {
-				"method": "GET",
-				"header": []
 			},
 			"response": []
 		}
