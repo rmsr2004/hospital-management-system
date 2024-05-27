@@ -1,5 +1,52 @@
+/*********************************************************
+*	Database for Hospital Management System				 *
+* 	Authors:											 *
+*		- João Afonso dos Santos Simões (2022236316)	 *
+*		- João Pinho Marques (2022234692)				 *
+*		- Rodrigo Miguel Santos Rodrigues (2022233032)	 *
+*												 		 *									
+*	Created on:	28/05/2024								 *
+**********************************************************
+*	create_tables.sql: SCRIPT TO CREATE THE TABLES		 *					
+*********************************************************/
+DROP TABLE IF EXISTS employees;
+DROP TABLE IF EXISTS patients;
+DROP TABLE IF EXISTS nurses;
+DROP TABLE IF EXISTS doctors;
+DROP TABLE IF EXISTS assistants;
+DROP TABLE IF EXISTS contract_types;
+DROP TABLE IF EXISTS specialisations;
+DROP TABLE IF EXISTS appointments;
+DROP TABLE IF EXISTS prescriptions;
+DROP TABLE IF EXISTS medicines;
+DROP TABLE IF EXISTS side_effects;
+DROP TABLE IF EXISTS surgeries;
+DROP TABLE IF EXISTS hospitalizations;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS bills;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS sub_specialisations;
+DROP TABLE IF EXISTS nurse_categories;
+DROP TABLE IF EXISTS nurses_categories;
+DROP TABLE IF EXISTS probabilities;
+DROP TABLE IF EXISTS roles_appointments;
+DROP TABLE IF EXISTS roles_surgeries;
+DROP TABLE IF EXISTS nurses_roles;
+DROP TABLE IF EXISTS hospitalizations_prescriptions;
+DROP TABLE IF EXISTS side_effects_medicines;
+DROP TABLE IF EXISTS prescriptions_medicines;
+DROP TABLE IF EXISTS appointments_prescriptions;
+DROP TABLE IF EXISTS specialisations_doctors;
+DROP TABLE IF EXISTS sub_specialisations_doctors;
+DROP TABLE IF EXISTS posologies;
+DROP TABLE IF EXISTS posologies_medicines;
+DROP TABLE IF EXISTS posologies_prescriptions;
+
+/*********************************************************
+*	TABLE: employees									 *
+*********************************************************/
 CREATE TABLE employees (
-	salary	 			FLOAT(8) NOT NULL,
+	salary	 			FLOAT(8) NOT NULL,		
 	start_date	 		DATE NOT NULL,
 	final_date	 		DATE,
 	ctype_id 			BIGINT NOT NULL,
@@ -14,7 +61,9 @@ CREATE TABLE employees (
 	person_type		 	INTEGER NOT NULL,
 	PRIMARY KEY(person_id)
 );
-
+/*********************************************************
+*	TABLE: patients 									 *
+*********************************************************/
 CREATE TABLE patients (
 	person_id	 		SERIAL,
 	person_cc	 		VARCHAR(9) NOT NULL,
@@ -27,12 +76,16 @@ CREATE TABLE patients (
 	person_type	 		INTEGER NOT NULL,
 	PRIMARY KEY(person_id)
 );
-
+/*********************************************************
+*	TABLE: nurses    									 *
+*********************************************************/
 CREATE TABLE nurses (
 	person_id 		INTEGER,
 	PRIMARY KEY(person_id)
 );
-
+/*********************************************************
+*	TABLE: doctors   									 *
+*********************************************************/
 CREATE TABLE doctors (
 	ml_id		 			BIGSERIAL NOT NULL,
 	ml_issue_date	 		DATE NOT NULL,
@@ -40,24 +93,24 @@ CREATE TABLE doctors (
 	person_id	 			INTEGER,
 	PRIMARY KEY(person_id)
 );
-
+/*********************************************************
+*	TABLE: assistants									 *
+*********************************************************/
 CREATE TABLE assistants (
 	person_id		INTEGER,
 	PRIMARY KEY(person_id)
 );
-
+/*********************************************************
+*	TABLE: contract_types   							 *
+*********************************************************/
 CREATE TABLE contract_types (
 	ctype_id		BIGSERIAL,
 	ctype	 		VARCHAR(20) NOT NULL,
 	PRIMARY KEY(ctype_id)
 );
-
-CREATE TABLE specialisations (
-	spec_id	 			BIGSERIAL,
-	specialization		VARCHAR(20) NOT NULL,
-	PRIMARY KEY(spec_id)
-);
-
+/*********************************************************
+*	TABLE: appointments									 *
+*********************************************************/
 CREATE TABLE appointments (
 	appointment_id		BIGSERIAL,
 	app_date			DATE NOT NULL,
@@ -72,27 +125,9 @@ CREATE TABLE appointments (
 	bill_id				BIGINT NOT NULL,
 	PRIMARY KEY(appointment_id,patient_id,doctor_id)
 );
-
-CREATE TABLE prescriptions (
-	presc_id 				BIGSERIAL,
-	presc_date				DATE NOT NULL,
-	presc_validity_date 	DATE NOT NULL,
-	PRIMARY KEY(presc_id)
-);
-
-CREATE TABLE medicines (
-	medication_id		BIGSERIAL,
-	medication	 		VARCHAR(20) NOT NULL,
-	PRIMARY KEY(medication_id)
-);
-
-CREATE TABLE side_effects (
-	side_effect_id		BIGSERIAL,
-	side_effect		 	VARCHAR(20) NOT NULL,
-	prob_id 			BIGINT NOT NULL,
-	PRIMARY KEY(side_effect_id)
-);
-
+/*********************************************************
+*	TABLE: surgeries									 *
+*********************************************************/
 CREATE TABLE surgeries (
 	surgery_id				BIGSERIAL,
 	surgery_date			DATE NOT NULL,
@@ -107,7 +142,9 @@ CREATE TABLE surgeries (
 	hosp_id				 	BIGINT NOT NULL,
 	PRIMARY KEY(surgery_id,doctor_id)
 );
-
+/*********************************************************
+*	TABLE: hospitalizations								 *
+*********************************************************/
 CREATE TABLE hospitalizations (
 	hosp_id				BIGSERIAL,
 	start_date			DATE NOT NULL,
@@ -118,7 +155,27 @@ CREATE TABLE hospitalizations (
 	nurse_id	 		INTEGER NOT NULL,
 	PRIMARY KEY(hosp_id)
 );
-
+/*********************************************************
+*	TABLE: prescriptions								 *
+*********************************************************/
+CREATE TABLE prescriptions (
+	presc_id 				BIGSERIAL,
+	presc_date				DATE NOT NULL,
+	presc_validity_date 	DATE NOT NULL,
+	PRIMARY KEY(presc_id)
+);
+/*********************************************************
+*	TABLE: bills    									 *
+*********************************************************/
+CREATE TABLE bills (
+	bill_id	 			BIGSERIAL,
+	total_payment	 	FLOAT(8) NOT NULL,
+	bill_status		 	BOOL NOT NULL DEFAULT FALSE,
+	PRIMARY KEY(bill_id)
+);
+/*********************************************************
+*	TABLE: payments 									 *
+*********************************************************/
 CREATE TABLE payments (
 	payment_id	 		BIGSERIAL,
 	payment	 			FLOAT(8) NOT NULL,
@@ -127,46 +184,76 @@ CREATE TABLE payments (
 	bill_id 			BIGINT,
 	PRIMARY KEY(payment_id,bill_id)
 );
-
-CREATE TABLE bills (
-	bill_id	 			BIGSERIAL,
-	total_payment	 	FLOAT(8) NOT NULL,
-	bill_status		 	BOOL NOT NULL DEFAULT FALSE,
-	PRIMARY KEY(bill_id)
-);
-
+/*********************************************************
+*	TABLE: roles    									 *
+*********************************************************/
 CREATE TABLE roles (
 	role_id		BIGSERIAL,
 	role	 	VARCHAR(20) NOT NULL,
 	role_type	INTEGER,
 	PRIMARY KEY(role_id)
 );
-
+/*********************************************************
+*	TABLE: specialisations								 *
+*********************************************************/
+CREATE TABLE specialisations (
+	spec_id	 			BIGSERIAL,
+	specialization		VARCHAR(20) NOT NULL,
+	PRIMARY KEY(spec_id)
+);
+/*********************************************************
+*	TABLE: sub_specialisations							 *
+*********************************************************/
 CREATE TABLE sub_specialisations (
 	sub_spec_id		BIGSERIAL,
 	sub_spec		VARCHAR(20) NOT NULL,
 	spec_id 		BIGINT NOT NULL,
 	PRIMARY KEY(sub_spec_id)
 );
-
+/*********************************************************
+*	TABLE: medicines									 *
+*********************************************************/
+CREATE TABLE medicines (
+	medication_id		BIGSERIAL,
+	medication	 		VARCHAR(20) NOT NULL,
+	PRIMARY KEY(medication_id)
+);
+/*********************************************************
+*	TABLE: side_effects									 *
+*********************************************************/
+CREATE TABLE side_effects (
+	side_effect_id		BIGSERIAL,
+	side_effect		 	VARCHAR(20) NOT NULL,
+	prob_id 			BIGINT NOT NULL,
+	PRIMARY KEY(side_effect_id)
+);
+/*********************************************************
+*	TABLE: nurse_categories								 *
+*********************************************************/
 CREATE TABLE nurse_categories (
 	category_id		BIGSERIAL,
 	category	 	VARCHAR(20) NOT NULL,
 	PRIMARY KEY(category_id)
 );
-
+/*********************************************************
+*	TABLE: nurses_categories							 *
+*********************************************************/
 CREATE TABLE nurses_categories (
 	nurse_id        INTEGER,
 	category_id     BIGINT,
 	PRIMARY KEY(nurse_id,category_id)
 );
-
+/*********************************************************
+*	TABLE: probabilities								 *
+*********************************************************/
 CREATE TABLE probabilities (
 	prob_id		BIGSERIAL,
 	prob	 	FLOAT(8) NOT NULL,
 	PRIMARY KEY(prob_id)
 );
-
+/*********************************************************
+*	TABLE: roles_appointments							 *
+*********************************************************/
 CREATE TABLE roles_appointments (
 	role_id			BIGINT,
 	app_id			BIGINT,
@@ -174,38 +261,50 @@ CREATE TABLE roles_appointments (
 	doctor_id 		INTEGER,
 	PRIMARY KEY(role_id,app_id,patient_id,doctor_id)
 );
-
+/*********************************************************
+*	TABLE: roles_surgeries							 	 *
+*********************************************************/
 CREATE TABLE roles_surgeries (
 	role_id			BIGINT,
 	surgery_id		BIGINT,
 	doctor_id 		INTEGER,
 	PRIMARY KEY(role_id,surgery_id,doctor_id)		
 );
-
+/*********************************************************
+*	TABLE: nurses_roles									 *
+*********************************************************/
 CREATE TABLE nurses_roles (
 	nurse_id		INTEGER,
 	role_id			BIGINT NOT NULL,
 	PRIMARY KEY(nurse_id)
 );
-
+/*********************************************************
+*	TABLE: hospitalizations_prescriptions				 *
+*********************************************************/
 CREATE TABLE hospitalizations_prescriptions (
 	hosp_id 		BIGINT NOT NULL,
 	presc_id		BIGINT,
 	PRIMARY KEY(presc_id)
 );
-
+/*********************************************************
+*	TABLE: side_effects_medicines				 		 *
+*********************************************************/
 CREATE TABLE side_effects_medicines (
 	side_effect_id		BIGINT,
 	medication_id	 	BIGINT,
 	PRIMARY KEY(side_effect_id,medication_id)
 );
-
+/*********************************************************
+*	TABLE: prescriptions_medicines				 		 *
+*********************************************************/
 CREATE TABLE prescriptions_medicines (
 	presc_id	 		BIGINT,
 	medication_id		BIGINT,
 	PRIMARY KEY(presc_id,medication_id)
 );
-
+/*********************************************************
+*	TABLE: appointments_prescriptions				 	 *
+*********************************************************/
 CREATE TABLE appointments_prescriptions (
 	app_id			BIGINT,
 	patient_id		INTEGER,
@@ -213,32 +312,42 @@ CREATE TABLE appointments_prescriptions (
 	presc_id		BIGINT NOT NULL,
 	PRIMARY KEY(app_id,patient_id,doctor_id)
 );
-
+/*********************************************************
+*	TABLE: specialisations_doctors						 *
+*********************************************************/
 CREATE TABLE specialisations_doctors (
 	spec_id			BIGINT,
 	doctor_id		INTEGER,
 	PRIMARY KEY(doctor_id)
 );
-
+/*********************************************************
+*	TABLE: sub_specialisations_doctors				 	 *
+*********************************************************/
 CREATE TABLE sub_specialisations_doctors (
 	doctor_id       INTEGER,
 	sub_spec_id		BIGINT,
 	PRIMARY KEY(doctor_id,sub_spec_id)
 );
-
+/*********************************************************
+*	TABLE: posologies				 					 *
+*********************************************************/
 CREATE TABLE posologies (
 	posology_id 	BIGSERIAL,
 	dosage			INTEGER NOT NULL,
 	frequency		INTEGER NOT NULL,
 	PRIMARY KEY(posology_id)
 );
-
+/*********************************************************
+*	TABLE: posologies_medicines							 *
+*********************************************************/
 CREATE TABLE posologies_medicines (
 	posology_id	 		BIGINT,
 	medication_id		BIGINT,
 	PRIMARY KEY(posology_id, medication_id)
 );
-
+/*********************************************************
+*	TABLE: posologies_prescriptions				 		 *	
+*********************************************************/
 CREATE TABLE posologies_prescriptions (
 	posology_id 	BIGINT,
 	presc_id 		BIGINT,
