@@ -119,7 +119,6 @@ CREATE TABLE appointments (
 	app_room			BIGINT NOT NULL,
 	app_hour			INTEGER NOT NULL,
 	app_minutes			INTEGER NOT NULL,
-	app_duration		BIGINT NOT NULL,
 	patient_id			INTEGER,
 	doctor_id 			INTEGER,
 	bill_id				BIGINT NOT NULL,
@@ -136,7 +135,6 @@ CREATE TABLE surgeries (
 	surgery_room			BIGINT NOT NULL,
 	surgery_hour			INTEGER NOT NULL,
 	surgery_minutes			INTEGER NOT NULL,
-	surgery_duration		BIGINT NOT NULL,
 	doctor_id 				INTEGER,
 	patient_id				INTEGER NOT NULL,
 	hosp_id				 	BIGINT NOT NULL,
@@ -417,11 +415,9 @@ ALTER TABLE roles ADD CONSTRAINT chk_role_type_0 CHECK (
     (role_type = 0 AND role IN ('TRIAGEM', 'PREPARACAO', 'SUPORTE')) OR
     (role_type = 1 AND role IN ('ASSISTENTE', 'MONITOR', 'ANESTESISTA'))
 );
-
 ALTER TABLE appointments ADD CONSTRAINT check_type CHECK (
 	app_type IN ('GERAL', 'CARDIOLOGIA', 'DERMATOLOGIA', 'OFTALMOLOGIA', 'PEDIATRIA', 'PSIQUIATRIA', 'REUMATOLOGIA', 'ORTOPEDIA', 'ANESTESIA')
 );
-
 ALTER TABLE surgeries ADD CONSTRAINT check_type CHECK (
 	surgery_type IN ('CARDIOLOGIA', 'DERMATOLOGIA', 'OFTALMOLOGIA', 'REUMATOLOGIA', 'ORTOPEDIA')
 );
