@@ -1,3 +1,4 @@
 *.env
 *.log
 python/aux.py
+sql/revoke_all.sql
