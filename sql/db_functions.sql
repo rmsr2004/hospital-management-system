@@ -279,6 +279,10 @@ BEGIN
     FROM bills
     WHERE bill_id = id;
 
+    -- Insira um novo pagamento na tabela payments
+    INSERT INTO payments (payment, payment_date, bill_id, method_payment)
+    VALUES (amount, CURRENT_DATE, id, p_method);
+
     -- Calcule o total já pago para o bill_id especificado
     SELECT COALESCE(SUM(payment), 0) INTO payment_so_far
     FROM payments
@@ -287,12 +291,9 @@ BEGIN
     -- Calcule o valor restante
     remaining_amount := total_amount - payment_so_far;
 
-    -- Insira um novo pagamento na tabela payments
-    INSERT INTO payments (payment, payment_date, bill_id, payment_method)
-    VALUES (amount, CURRENT_DATE, id, p_method);
-
-    -- Calcule o novo pagamento total
-    payment_so_far := payment_so_far + amount;
+    IF remaining_amount < 0 THEN
+        remaining_amount := 0;
+    END IF;
 
     -- Se o pagamento total até agora for maior ou igual ao total da fatura
     IF payment_so_far >= total_amount THEN
@@ -530,58 +531,63 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION validate_employee_data()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Validate salary
-    IF NEW.salary <= 0 THEN
-        RAISE EXCEPTION 'Salary must be greater than 0';
+    IF NEW.final_date IS NOT NULL AND NEW.final_date < NEW.start_date THEN
+        RAISE EXCEPTION 'Final date cannot be before start date';
     END IF;
 
-	-- Validate start_date format
-    IF NEW.start_date::TEXT !~ '^\d{4}-\d{2}-\d{2}$' THEN
-        RAISE EXCEPTION 'Start date must be in the format YYYY-MM-DD';
+    IF NEW.salary < 0 THEN
+        RAISE EXCEPTION 'Salary must be a positive number';
+    END IF;
+
+    -- Verificação do tamanho dos campos
+    IF length(NEW.person_cc) <> 8 THEN
+        RAISE EXCEPTION 'Person CC must be 8 digits';
     END IF;
     
-    -- Validate final_date format
-    IF NEW.final_date IS NOT NULL AND NEW.final_date::TEXT !~ '^\d{4}-\d{2}-\d{2}$' THEN
-        RAISE EXCEPTION 'Final date must be in the format YYYY-MM-DD';
+    IF length(NEW.person_phone) <> 9 THEN
+        RAISE EXCEPTION 'Person phone must be 9 digits';
     END IF;
 
-    -- Validate final_date
-    IF NEW.final_date IS NOT NULL AND NEW.final_date <= NEW.start_date THEN
-        RAISE EXCEPTION 'Final date must be after the start date';
+    IF length(NEW.person_name) > 20 THEN
+        RAISE EXCEPTION 'Person name must be at most 20 characters';
+    END IF;
+    
+    IF length(NEW.person_address) > 50 THEN
+        RAISE EXCEPTION 'Person address must be at most 50 characters';
+    END IF;
+    
+    IF length(NEW.person_username) > 15 THEN
+        RAISE EXCEPTION 'Person username must be at most 15 characters';
+    END IF;
+    
+    IF length(NEW.person_password) > 512 THEN
+        RAISE EXCEPTION 'Person password must be at most 512 characters';
     END IF;
 
-    -- Validate phone number
-    IF LENGTH(CAST(NEW.person_phone AS VARCHAR)) <> 9 THEN
-        RAISE EXCEPTION 'Phone number must be exactly 9 digits';
+    IF NEW.person_email IS NOT NULL AND length(NEW.person_email) > 30 THEN
+        RAISE EXCEPTION 'Person email must be at most 30 characters';
     END IF;
 
-    -- Validate email format
-    IF NEW.person_email IS NOT NULL AND NEW.person_email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$' THEN
-        RAISE EXCEPTION 'Email format is invalid';
+    IF NEW.person_type < 1 OR NEW.person_type > 4 THEN
+        RAISE EXCEPTION 'Person type must be between 1 and 4';
     END IF;
 
-	-- Validate CC
-	IF LENGTH(CAST(NEW.person_cc AS VARCHAR)) <> 8 THEN
-		RAISE EXCEPTION 'CC must be exactly 8 digits';
-	END IF;
-
-	-- Validate Type
-	IF NEW.person_type < 2 AND NEW.person_type > 4 THEN
-		RAISE EXCEPTION 'Person type must be 1, 2 or 3';
-	END IF;
-
-	-- Validate lengths
-	IF LENGTH(NEW.person_name) > 20 THEN
-		RAISE EXCEPTION 'Person name length must be lower than 20';
-	END IF;
-	
-	IF LENGTH(NEW.person_username) > 15 THEN
-		RAISE EXCEPTION 'Person username length must be lower than 15';
-	END IF;
-		
-	IF LENGTH(NEW.person_name) > 20 THEN
-		RAISE EXCEPTION 'Person name length must be lower than 20';
-	END IF;
+    -- Verificação de unicidade
+    IF EXISTS (SELECT 1 FROM employees WHERE person_cc = NEW.person_cc AND person_id <> NEW.person_id) THEN
+        RAISE EXCEPTION 'Person CC must be unique';
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM employees WHERE person_phone = NEW.person_phone AND person_id <> NEW.person_id) THEN
+        RAISE EXCEPTION 'Person phone must be unique';
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM employees WHERE person_username = NEW.person_username AND person_id <> NEW.person_id) THEN
+        RAISE EXCEPTION 'Person username must be unique';
+    END IF;
+    
+    IF NEW.person_email IS NOT NULL AND EXISTS (SELECT 1 FROM employees WHERE person_email = NEW.person_email AND person_id <> NEW.person_id) THEN
+        RAISE EXCEPTION 'Person email must be unique';
+    END IF;
 
     RETURN NEW;
 END;
@@ -597,39 +603,55 @@ EXECUTE FUNCTION validate_employee_data();
 CREATE OR REPLACE FUNCTION validate_patient_data()
 RETURNS TRIGGER AS $$
 BEGIN
-
-    -- Validate phone number
-    IF LENGTH(NEW.person_phone) <> 9 THEN
-        RAISE EXCEPTION 'Phone number must be exactly 9 digits';
+    -- Verificação do tamanho dos campos
+    IF length(NEW.person_cc) <> 8 THEN
+        RAISE EXCEPTION 'Person CC must be 8 digits';
+    END IF;
+    
+    IF length(NEW.person_phone) <> 9 THEN
+        RAISE EXCEPTION 'Person phone must be 9 digits';
     END IF;
 
-    -- Validate email format
-    IF NEW.person_email IS NOT NULL AND NEW.person_email !~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$' THEN
-        RAISE EXCEPTION 'Email format is invalid';
+    IF length(NEW.person_name) > 20 THEN
+        RAISE EXCEPTION 'Person name must be at most 20 characters';
+    END IF;
+    
+    IF length(NEW.person_address) > 50 THEN
+        RAISE EXCEPTION 'Person address must be at most 50 characters';
+    END IF;
+    
+    IF length(NEW.person_username) > 15 THEN
+        RAISE EXCEPTION 'Person username must be at most 15 characters';
+    END IF;
+    
+    IF length(NEW.person_password) > 512 THEN
+        RAISE EXCEPTION 'Person password must be at most 512 characters';
     END IF;
 
-	-- Validate CC
-	IF LENGTH(CAST(NEW.person_cc AS VARCHAR)) <> 8 THEN
-		RAISE EXCEPTION 'CC must be exactly 8 digits';
-	END IF;
+    IF NEW.person_email IS NOT NULL AND length(NEW.person_email) > 30 THEN
+        RAISE EXCEPTION 'Person email must be at most 30 characters';
+    END IF;
 
-	-- Validate Type
-	IF NEW.person_type < 2 AND NEW.person_type > 4 THEN
-		RAISE EXCEPTION 'Person type must be 1, 2 or 3';
-	END IF;
+    IF NEW.person_type > 1 THEN
+        RAISE EXCEPTION 'Person type must be between 1';
+    END IF;
 
-	-- Validate lengths
-	IF LENGTH(NEW.person_name) > 20 THEN
-		RAISE EXCEPTION 'Person name length must be lower than 20';
-	END IF;
-	
-	IF LENGTH(NEW.person_username) > 15 THEN
-		RAISE EXCEPTION 'Person username length must be lower than 15';
-	END IF;
-		
-	IF LENGTH(NEW.person_name) > 20 THEN
-		RAISE EXCEPTION 'Person name length must be lower than 20';
-	END IF;
+    -- Verificação de unicidade
+    IF EXISTS (SELECT 1 FROM patients WHERE person_cc = NEW.person_cc AND person_id <> NEW.person_id) THEN
+        RAISE EXCEPTION 'Person CC must be unique';
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM patients WHERE person_phone = NEW.person_phone AND  person_id <> NEW.person_id) THEN
+        RAISE EXCEPTION 'Person phone must be unique';
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM patients WHERE person_username = NEW.person_username AND person_id <> NEW.person_id) THEN
+        RAISE EXCEPTION 'Person username must be unique';
+    END IF;
+    
+    IF NEW.person_email IS NOT NULL AND EXISTS (SELECT 1 FROM patients WHERE person_email = NEW.person_email AND person_id <> NEW.person_id) THEN
+        RAISE EXCEPTION 'Person email must be unique';
+    END IF;
 
     RETURN NEW;
 END;

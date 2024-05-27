@@ -4,7 +4,7 @@ CREATE TABLE employees (
 	final_date	 		DATE,
 	ctype_id 			BIGINT NOT NULL,
 	person_id		 	SERIAL,
-	person_cc		 	BIGINT NOT NULL,
+	person_cc		 	VARCHAR(9) NOT NULL,
 	person_name		 	VARCHAR(20) NOT NULL,
 	person_address	 	VARCHAR(50) NOT NULL,
 	person_phone		VARCHAR(10) NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE employees (
 
 CREATE TABLE patients (
 	person_id	 		SERIAL,
-	person_cc	 		BIGINT NOT NULL,
+	person_cc	 		VARCHAR(9) NOT NULL,
 	person_name	 		VARCHAR(20) NOT NULL,
 	person_address	 	VARCHAR(50) NOT NULL,
 	person_phone	 	VARCHAR(10) NOT NULL,
@@ -189,9 +189,9 @@ CREATE TABLE nurses_roles (
 );
 
 CREATE TABLE hospitalizations_prescriptions (
-	hosp_id 		BIGINT,
-	presc_id		BIGINT NOT NULL,
-	PRIMARY KEY(hosp_id)
+	hosp_id 		BIGINT NOT NULL,
+	presc_id		BIGINT,
+	PRIMARY KEY(presc_id)
 );
 
 CREATE TABLE side_effects_medicines (
@@ -288,7 +288,6 @@ ALTER TABLE roles_surgeries ADD CONSTRAINT roles_surgeries_fk1 FOREIGN KEY (role
 ALTER TABLE roles_surgeries ADD CONSTRAINT roles_surgeries_fk2 FOREIGN KEY (surgery_id, doctor_id) REFERENCES surgeries(surgery_id, doctor_id);
 ALTER TABLE nurses_roles ADD CONSTRAINT nurses_roles_fk1 FOREIGN KEY (nurse_id) REFERENCES nurses(person_id);
 ALTER TABLE nurses_roles ADD CONSTRAINT nurses_roles_fk2 FOREIGN KEY (role_id) REFERENCES roles(role_id);
-ALTER TABLE hospitalizations_prescriptions ADD UNIQUE (presc_id);
 ALTER TABLE hospitalizations_prescriptions ADD CONSTRAINT hospitalizations_prescriptions_fk1 FOREIGN KEY (hosp_id) REFERENCES hospitalizations(hosp_id);
 ALTER TABLE hospitalizations_prescriptions ADD CONSTRAINT hospitalizations_prescriptions_fk2 FOREIGN KEY (presc_id) REFERENCES prescriptions(presc_id);
 ALTER TABLE side_effects_medicines ADD CONSTRAINT side_effects_medicines_fk1 FOREIGN KEY (side_effect_id) REFERENCES side_effects(side_effect_id);
