@@ -1,10 +1,12 @@
+from dotenv import dotenv_values
+from cryptography.fernet import Fernet
+from datetime import datetime
 import flask
 import logging
 import psycopg2
 import jwt
 import secrets
-from dotenv import dotenv_values
-from cryptography.fernet import Fernet
+import json
 
 app = flask.Flask(__name__)
 
@@ -106,25 +108,35 @@ def add_doctor():
     # Validate payload.
     #
 
-    required_fields = ['name', 'cc', 'address', 'phone', 'username', 'password', 'email', 'contract', 'medical_license']
+    required_fields = ['name', 'cc', 'address', 'phone', 'username', 'password', 'email', 'contract', 'medical_license', 'specialisations']
     required_contract_fields = ['salary', 'start_date', 'final_date', 'ctype_id']
     required_medical_license_fields = ['issue_date', 'expiration_date']
 
     for field in required_fields:
         if field not in payload:
-            response = {'status': StatusCodes['api_error'], 'results': f'{field} value not in payload'}
+            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
             return flask.jsonify(response)
         
     # Verify contract fields
     for field in required_contract_fields:
         if field not in payload['contract']:
-            response = {'status': StatusCodes['api_error'], 'results': f'{field} value not in contract payload'}
+            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in contract payload'}
             return flask.jsonify(response)
         
     # Verify medical license fields
     for field in required_medical_license_fields:
         if field not in payload['medical_license']:
-            response = {'status': StatusCodes['api_error'], 'results': f'{field} value not in medical_license payload'}
+            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in medical_license payload'}
+            return flask.jsonify(response)
+    
+    specialisations = payload['specialisations']
+        
+    # Validate Date formats
+    dates = [payload['contract']['start_date'], payload['contract']['final_date'], payload['medical_license']['issue_date'], payload['medical_license']['expiration_date']]
+
+    for date in dates:
+        if not validate_date_format(date):
+            response = {'status': StatusCodes['api_error'], 'errors': f'Invalid date format: {date}'}
             return flask.jsonify(response)
 
     #
@@ -158,6 +170,48 @@ def add_doctor():
         doctor_id = cur.fetchone()[0]
         if doctor_id is None:
             raise Exception('Error inserting doctor!')
+        
+        # Queries to insert the doctor specialisations and sub-specialisations
+        for spec in specialisations:
+            spec_id, sub_spec_id = spec
+
+            # Query to verify if the specialisation exists
+            statement = """
+                SELECT spec_id FROM specialisations WHERE spec_id = %s;
+            """
+            values = (spec_id, )
+            cur.execute(statement, values)
+
+            result = cur.fetchone()
+            if result is None:
+                raise Exception(f'Specialisation {spec_id} does not exist!')
+            
+            # Query to verify if the sub-specialisation exists
+            if sub_spec_id is not None:
+                statement = """
+                    SELECT sub_spec_id FROM sub_specialisations WHERE sub_spec_id = %s;
+                """
+                values = (sub_spec_id, )
+                cur.execute(statement, values)
+
+                result = cur.fetchone()
+                if result is None:
+                    raise Exception(f'Sub-specialisation {sub_spec_id} does not exist!')
+                
+                # Query to insert the doctor sub-specialisation
+                statement = """
+                    INSERT INTO sub_specialisations_doctors (doctor_id, sub_spec_id) VALUES (%s, %s);
+                """
+                values = (doctor_id, sub_spec_id)
+                cur.execute(statement, values)
+                
+            # Query to insert the doctor specialisation
+            statement = """
+                INSERT INTO specialisations_doctors (doctor_id, spec_id) VALUES (%s, %s);
+            """
+            values = (doctor_id, spec_id)
+            cur.execute(statement, values)
+
         
         response = {'status': StatusCodes['success'], 'results': doctor_id}
 
@@ -218,20 +272,27 @@ def add_nurse():
 
     for field in required_fields:
         if field not in payload:
-            response = {'status': StatusCodes['api_error'], 'results': f'{field} value not in payload'}
+            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
             return flask.jsonify(response)
         
     # Verify contract fields
     for field in required_contract_fields:
         if field not in payload['contract']:
-            response = {'status': StatusCodes['api_error'], 'results': f'{field} value not in contract payload'}
+            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in contract payload'}
             return flask.jsonify(response)
         
     if payload['categories'] == []:
-        response = {'status': StatusCodes['api_error'], 'results': 'categories values is empty'}
+        response = {'status': StatusCodes['api_error'], 'errors': 'categories values is empty'}
         return flask.jsonify(response)
     
     categories = payload['categories']
+
+    # Validate Date formats
+    dates = [payload['contract']['start_date'], payload['contract']['final_date']]
+    for date in dates:
+        if not validate_date_format(date):
+            response = {'status': StatusCodes['api_error'], 'errors': f'Invalid date format: {date}'}
+            return flask.jsonify(response)
 
     #
     # SQL query
@@ -341,15 +402,22 @@ def add_assistant():
 
     for field in required_fields:
         if field not in payload:
-            response = {'status': StatusCodes['api_error'], 'results': f'{field} value not in payload'}
+            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
             return flask.jsonify(response)
         
     # Verify contract fields
     for field in required_contract_fields:
         if field not in payload['contract']:
-            response = {'status': StatusCodes['api_error'], 'results': f'{field} value not in contract payload'}
+            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in contract payload'}
             return flask.jsonify(response)
     
+    # Validate Date formats
+    dates = [payload['contract']['start_date'], payload['contract']['final_date']]
+    for date in dates:
+        if not validate_date_format(date):
+            response = {'status': StatusCodes['api_error'], 'errors': f'Invalid date format: {date}'}
+            return flask.jsonify(response)
+
     #
     # SQL Query
     #
@@ -429,7 +497,7 @@ def add_patient():
 
     for field in required_fields:
         if field not in payload:
-            response = {'status': StatusCodes['api_error'], 'results': f'{field} value not in payload'}
+            response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
             return flask.jsonify(response)
 
 
@@ -532,13 +600,13 @@ def login():
         if result:
             user_type, user_id, decrypted_password = result
 
-            logger.debug(f'PUT /dbproj/user - user_type: {user_type}, user_id: {user_id}, decrypted_password: {decrypted_password}')
-
             if decrypted_password != payload['password']:
                 raise Exception('Invalid password!')
             
             jwt_payload = { 'user_id': int(user_id), 'user_type': int(user_type)}
             jwt_token = jwt.encode(jwt_payload, secret_key, algorithm='HS256')
+
+            logger.debug(f'PUT /dbproj/user - user {user_id} logged in')
             
             response = {'status': StatusCodes['success'], 'results': jwt_token}
 
@@ -614,6 +682,15 @@ def schedule_appointment():
             response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
             return flask.jsonify(response)
     
+    if payload['nurses'] == []:
+        response = {'status': StatusCodes['api_error'], 'errors': 'nurses values is empty'}
+        return flask.jsonify(response)
+    
+    # Validate Date format
+    if not validate_date_format(payload['date']):
+        response = {'status': StatusCodes['api_error'], 'errors': f'Invalid date format: {payload["date"]}'}
+        return flask.jsonify(response)
+    
     #
     # SQL query 
     #
@@ -627,7 +704,7 @@ def schedule_appointment():
         FROM employees AS e
         LEFT JOIN specialisations_doctors AS sd ON e.person_id = sd.doctor_id
         LEFT JOIN specialisations AS s ON s.spec_id = sd.spec_id
-        WHERE e.person_type = 2 AND e.person_id = %s AND ( %s = 'GERAL' AND sd.spec_id IS NULL 
+        WHERE e.person_type = 2 AND e.person_id = %s AND ( (%s = 'GERAL' AND sd.spec_id IS NULL)
                                                            OR s.specialization = %s);
     """
     values = (payload['doctor_id'], payload['type'], payload['type'])
@@ -930,6 +1007,10 @@ def shedule_surgery(hospitalization_id=None):
     
     # Verify if there is a responsible nurse and assign the nurse to a variable and remove it from the list
     nurses = payload['nurses'] # [[id, 'RESPONSAVEL']]
+    if nurses == []:
+        response = {'status': StatusCodes['api_error'], 'errors': 'nurses values is empty'}
+        return flask.jsonify(response)
+    
     nurse_responsible_id = None
     for nurse in nurses:
         if nurse[1] == "RESPONSAVEL":
@@ -945,6 +1026,13 @@ def shedule_surgery(hospitalization_id=None):
         if 'final_date' not in payload:
             response = {'status': StatusCodes['api_error'], 'errors': 'final_date is required!'}
             return flask.jsonify(response)
+        if not validate_date_format(payload['final_date']):
+            response = {'status': StatusCodes['api_error'], 'errors': f'Invalid date format: {payload["final_date"]}'}
+            return flask.jsonify(response)
+        
+    if not validate_date_format(payload['date']):
+        response = {'status': StatusCodes['api_error'], 'errors': f'Invalid date format: {payload["date"]}'}
+        return flask.jsonify(response)
     
     #
     # SQL query
@@ -1206,7 +1294,7 @@ def get_prescriptions(person_id):
             JOIN posologies_medicines AS pm ON pos.posology_id = pm.posology_id
             JOIN medicines AS m ON pm.medication_id = m.medication_id
             JOIN appointments_prescriptions AS ap ON ap.presc_id = p.presc_id
-            WHERE ap.patient_id = 1)
+            WHERE ap.patient_id = %s)
 
             UNION
 
@@ -1219,7 +1307,7 @@ def get_prescriptions(person_id):
             JOIN hospitalizations_prescriptions AS hp ON p.presc_id = hp.presc_id
             JOIN hospitalizations AS h ON hp.hosp_id = h.hosp_id
             JOIN surgeries AS s ON s.hosp_id = h.hosp_id
-            WHERE s.patient_id = 1)
+            WHERE s.patient_id = %s)
         )
         ORDER BY presc_id ASC;
     """
@@ -1284,7 +1372,7 @@ def add_prescription():
         return flask.jsonify(response)
 
     # Verify if the user is the targeted patient or a employee
-    if jwt_token['user_type'] == user_types['doctor']:
+    if jwt_token['user_type'] != user_types['doctor']:
         response = {'status': StatusCodes['api_error'], 'errors': 'Only doctors can add prescriptions!'}
         return flask.jsonify(response)
     
@@ -1311,6 +1399,11 @@ def add_prescription():
             if field not in medicine:
                 response = {'status': StatusCodes['api_error'], 'errors': f'{field} value not in payload'}
                 return flask.jsonify(response)
+            
+    # Validate Date format
+    if not validate_date_format(payload['validity_date']):
+        response = {'status': StatusCodes['api_error'], 'errors': f'Invalid date format: {payload["validity_date"]}'}
+        return flask.jsonify(response)
     
     #
     # SQL query
@@ -1420,6 +1513,17 @@ def add_prescription():
             cur.execute(statement, values)
 
         elif payload['type'] == 'appointment':
+            # Query to verify if appointment already has a prescription
+            statement = """
+                SELECT app_id FROM appointments_prescriptions WHERE app_id = %s;
+            """
+            values = (event_id, )
+            cur.execute(statement, values)
+
+            result = cur.fetchone()
+            if result is not None:
+                raise Exception('Appointment already has a prescription!')
+            
             # Query to get appointment_id, doctor_id and patient_id
             statement = """
                 SELECT appointment_id, doctor_id, patient_id FROM appointments WHERE appointment_id = %s;
@@ -1507,16 +1611,17 @@ def execute_payment(bill_id):
         JOIN bills AS b ON b.bill_id = h.bill_id
         WHERE b.bilL_id = %s;
     """
-    values = (int(bill_id), int(bill_id))
+    values = (bill_id, bill_id)
 
     try:
         cur.execute(statement, values)
         result = cur.fetchone()
 
-        if result is None:
+        if result[0] is None:
             raise Exception('Bill {bill_id} does not exist!')
         
-        if result != jwt_token['user_id']:
+        if result[0] != jwt_token['user_id']:
+            logger.debug(f'Bill {bill_id} does not belong to user {jwt_token["user_id"]}')
             raise Exception('You can only pay your own bills!')
 
         #
@@ -1537,9 +1642,9 @@ def execute_payment(bill_id):
     
         # Perform the payment and update bill status if necessary
         statement = """
-            CALL update_bills(%s, %s, %s);
+            CALL update_bills(%s, %s, %s, %s);
         """
-        values = (float(payload['amount']), int(payload['payment_method']), int(bill_id))
+        values = (payload['amount'], payload['payment_method'], bill_id, None)
 
         cur.execute(statement, values)
         remaining_amount = cur.fetchone()[0]
@@ -1600,64 +1705,166 @@ def get_top_clients():
 
     # Query to get the top 3 clients
     statement = """
-        WITH combined_payments AS (
-            -- Select payments from appointments
-            SELECT p.person_id, p.person_name AS client_name, a.appointment_id AS procedure_id, a.doctor_id,
-                   a.app_date AS procedure_date, SUM(pm.payment) AS total_payment
+        SELECT
+            p.person_name AS patient_name,
+            COALESCE(total_appointments.total_paid, 0) + COALESCE(total_hospitalizations.total_paid, 0) AS total_paid,
+            service_details.service_type,
+            service_details.service_id,
+            service_details.service_date,
+            service_details.doctor_id,
+            service_details.doctor_name,
+            service_details.app_type, -- Buscando app_type diretamente de appointments
+            service_details.surgery_id, -- ID da cirurgia
+            service_details.surgery_type, -- Tipo de cirurgia
+            service_details.payment_for_service
+        FROM patients p
+        LEFT JOIN (
+            SELECT p.person_id, SUM(py.payment) AS total_paid
             FROM patients p
             JOIN appointments a ON p.person_id = a.patient_id
             JOIN bills b ON a.bill_id = b.bill_id
-            JOIN payments pm ON b.bill_id = pm.bill_id
-            WHERE DATE_TRUNC('month', a.app_date) = DATE_TRUNC('month', CURRENT_DATE)
-            GROUP BY p.person_id, p.person_name, a.appointment_id, a.doctor_id, a.app_date
-            UNION ALL
-            SELECT p.person_id, p.person_name AS client_name, h.hosp_id AS procedure_id, s.doctor_id,h.start_date AS procedure_date,
-                   SUM(pm.payment) AS total_payment
+            JOIN payments py ON b.bill_id = py.bill_id
+            WHERE EXTRACT(YEAR FROM py.payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND EXTRACT(MONTH FROM py.payment_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+            GROUP BY p.person_id
+        ) total_appointments ON p.person_id = total_appointments.person_id
+        LEFT JOIN (
+            SELECT p.person_id, SUM(py.payment) AS total_paid
             FROM patients p
             JOIN surgeries s ON p.person_id = s.patient_id
-            JOIN hospitalization        
-        # Formata os resultados em um formato mais legível para o Postmans h ON s.hosp_id = h.hosp_id
+            JOIN hospitalizations h ON s.hosp_id = h.hosp_id
             JOIN bills b ON h.bill_id = b.bill_id
-            JOIN payments pm ON b.bill_id = pm.bill_id
-            WHERE DATE_TRUNC('month', h.start_date) = DATE_TRUNC('month', CURRENT_DATE)
-            GROUP BY p.person_id, p.person_name, h.hosp_id, s.doctor_id, h.start_date
-        )
-        SELECT client_name,procedure_id, doctor_id, procedure_date, total_payment
-        FROM combined_payments
-        ORDER BY total_payment DESC;
+            JOIN payments py ON b.bill_id = py.bill_id
+            WHERE EXTRACT(YEAR FROM py.payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND EXTRACT(MONTH FROM py.payment_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+            GROUP BY p.person_id
+        ) total_hospitalizations ON p.person_id = total_hospitalizations.person_id
+        JOIN (
+            SELECT 
+                'appointment' AS service_type,
+                a.appointment_id AS service_id,
+                a.app_date AS service_date,
+                d.person_id AS doctor_id,
+                e.person_name AS doctor_name,
+                py.payment AS payment_for_service,
+                p.person_id AS patient_id,
+                'Consulta' AS appointment_type, -- Definindo a coluna appointment_type
+                a.app_type AS app_type, -- Buscando app_type diretamente de appointments
+                NULL AS surgery_id, -- Para consultas, o surgery_id é NULL
+                NULL AS surgery_type, -- Para consultas, o surgery_type é NULL
+                a.appointment_id -- Adicionando o appointment_id
+            FROM patients p
+            JOIN appointments a ON p.person_id = a.patient_id
+            JOIN bills b ON a.bill_id = b.bill_id
+            JOIN payments py ON b.bill_id = py.bill_id
+            JOIN doctors d ON a.doctor_id = d.person_id
+            JOIN employees e ON d.person_id = e.person_id
+            WHERE EXTRACT(YEAR FROM py.payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND EXTRACT(MONTH FROM py.payment_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+                AND a.app_type IN ('GERAL', 'CARDIOLOGIA', 'DERMATOLOGIA', 'OFTALMOLOGIA', 'PEDIATRIA', 'PSIQUIATRIA', 'REUMATOLOGIA', 'ORTOPEDIA', 'ANESTESIA')
+            
+            UNION ALL
+
+            SELECT 
+                'hospitalization' AS service_type,
+                h.hosp_id AS service_id,
+                h.start_date AS service_date,
+                d.person_id AS doctor_id,
+                e.person_name AS doctor_name,
+                py.payment AS payment_for_service,
+                p.person_id AS patient_id,
+                NULL AS appointment_type, -- Para hospitalizações, o appointment_type é NULL
+                NULL AS app_type, -- Para hospitalizações, o app_type é NULL
+                s.surgery_id, -- ID da cirurgia
+                s.surgery_type, -- Tipo de cirurgia
+                NULL AS appointment_id -- O appointment_id é NULL para hospitalizações
+            FROM patients p
+            JOIN surgeries s ON p.person_id = s.patient_id
+            JOIN hospitalizations h ON s.hosp_id = h.hosp_id
+            JOIN bills b ON h.bill_id = b.bill_id
+            JOIN payments py ON b.bill_id = py.bill_id
+            JOIN doctors d ON s.doctor_id = d.person_id
+            JOIN employees e ON d.person_id = e.person_id
+            WHERE EXTRACT(YEAR FROM py.payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND EXTRACT(MONTH FROM py.payment_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+        ) service_details ON p.person_id = service_details.patient_id
+        ORDER BY total_paid DESC;
     """
 
     try:
         cur.execute(statement)
-        top_clients = cur.fetchall()
+        result = cur.fetchall()
 
-        if top_clients == []:
+        if result == []:
             raise Exception('No patients found!')
 
-        results = []
-        count = 0
+        patients_data = []
+        patients_grouped = {}
+        
+        for row in result:
+            p_name, total_amount, type, *procedure_data = row
 
-        for client in top_clients:
-            client_data = {
-                'client_name': client[0],
-                'appointment/hospitalizaiotn id': client[1],
-                'doctor_id': client[2],
-                'appointment/hospitalization date': client[3],
-                'total_payment': float(client[4]) 
-            }
-            results.append(client_data)
+            # Get details of the procedure
+            if type == 'appointment':
+                procedure_id = procedure_data[0]
+                procedure_key = tuple(procedure_data[1:])  # Exclude the cost field
+            elif type == 'hospitalization':
+                procedure_id = procedure_data[0]
+                procedure_key = tuple(procedure_data[1:])  # Exclude the cost field
 
-            count += 1
-            if count==3:
-                break
-            
-        response = {'status': StatusCodes['success'], 'results': results}
+            procedure_cost = procedure_data[-1]
+
+            if p_name not in patients_grouped:
+                patients_grouped[p_name] = {
+                    'patient_name': p_name,
+                    'total_amount': total_amount,
+                    'procedures': []
+                }
+
+            # Verify if the procedure already exists
+            existing_procedure_index = None
+            for index, existing_procedure in enumerate(patients_grouped[p_name]['procedures']):
+                if existing_procedure['id'] == procedure_id:
+                    existing_procedure_index = index
+                    break
+
+            # Procedure already exists, update the cost
+            if existing_procedure_index is not None:
+                patients_grouped[p_name]['procedures'][existing_procedure_index]['cost'] += procedure_cost
+            else:
+                # If the procedure does not exist, add it
+                if type == 'appointment':
+                    patients_grouped[p_name]['procedures'].append({
+                        'id': procedure_id,
+                        'type': type,
+                        'date': date_to_str(procedure_key[0]),
+                        'doctor_id': procedure_key[1],
+                        'doctor_name': procedure_key[2],
+                        'appointment_type': procedure_key[3],
+                        'cost': procedure_cost
+                    })
+                elif type == 'hospitalization':
+                    patients_grouped[p_name]['procedures'].append({
+                        'id': procedure_id,
+                        'type': type,
+                        'date': date_to_str(procedure_key[0]),
+                        'doctor_id': procedure_key[1],
+                        'doctor_name': procedure_key[2],
+                        'surgery_id': procedure_key[4],
+                        'surgery_type': procedure_key[5],
+                        'cost': procedure_cost
+                    })
+
+        for patient_data in patients_grouped.values():
+            patients_data.append(patient_data)
+        
+        response = {'status': StatusCodes['success'], 'results': patients_data[:3]}
 
     except (Exception, psycopg2.DatabaseError) as error:
         # an error occurred, rollback
         conn.rollback()
 
-        logger.error(f'POST dbproj/top3 - error: {error}')
+        logger.error(f'GET dbproj/top3 - error: {error}')
 
         error = str(error).split('\n')[0]
         response = {'status': StatusCodes['internal_error'], 'errors': error, 'results': None}
@@ -1667,6 +1874,7 @@ def get_top_clients():
             conn.close()
 
     return flask.jsonify(response)
+
 ##
 ##  Get Daily Summary
 ##
@@ -1691,18 +1899,21 @@ def get_daily_summary(date):
 
     # Verify if the user is a assistant
     if jwt_token['user_type'] != user_types['assistant']:
-        response = {'status': StatusCodes['api_error'], 'errors': 'Only assistants can get top3 patients'}
+        response = {'status': StatusCodes['api_error'], 'errors': 'Only assistants can get daily summary'}
         return flask.jsonify(response)
     
-    # Parse the date string into year, month, and day
+    if not date:
+        response = {'status': StatusCodes['api_error'], 'errors': 'Date is required!'}
+        return flask.jsonify(response)
+    
+    # Validate date format and parse the date string into year, month, and day
+    if not validate_date_format(date):
+        response = {'status': StatusCodes['api_error'], 'errors': 'Invalid date format!'}
+        return flask.jsonify(response)
+    
     year, month, day = date.split('-')
     year, month, day = int(year), int(month), int(day)
-
-    # Check if the date is valid
-    if not (1 <= month <= 12 and 1 <= day <= 31):
-        response = {'status': StatusCodes['api_error'], 'errors': 'Invalid date!'}
-        return flask.jsonify(response)
-
+    
     #
     # SQL query
     #
@@ -1710,13 +1921,15 @@ def get_daily_summary(date):
     conn = db_connection()
     cur = conn.cursor()
 
+    date_str = f"{year}-{month:02d}-{day:02d}" 
+
     statement = """
         SELECT 
-            ( SELECT COUNT(*) FROM surgeries WHERE surgeries_date = %s-%s-%s ) AS num_surgeries,
-            ( SELECT SUM(payment) FROM payments WHERE payment_date = %s-%s-%s) AS amount_spent,
-            ( SELECT COUNT(*) FROM prescriptions WHERE prescription_date = %s-%s-%s) AS num_prescriptions
+            (SELECT COUNT(*) FROM surgeries WHERE surgery_date = %s),
+            (SELECT COALESCE(SUM(payment), 0) FROM payments WHERE payment_date = %s),
+            (SELECT COUNT(*) FROM prescriptions WHERE presc_date = %s);
     """
-    values = (year, month, day, year, month, day, year, month, day)
+    values = (date_str, date_str, date_str)
 
     try:
         cur.execute(statement, values)
@@ -1724,7 +1937,6 @@ def get_daily_summary(date):
 
         if row is None:
             raise Exception('No data found for the given date!')
-
 
         response = {
             'status': StatusCodes['success'], 
@@ -1784,13 +1996,28 @@ def get_monthly_surgery_report():
 
     # Query to get the number of surgeries per doctor in the last 12 months
     statement = """
-        SELECT e.person_name AS doctor_name, COUNT(s.surgery_id) AS num_surgeries
-        FROM surgeries AS s
-        JOIN employees AS e ON s.doctor_id = e.person_id
-        WHERE s.surgery_date >= (CURRENT_DATE - INTERVAL '12 months') 
-            AND s.surgery_date <= CURRENT_DATE
-        GROUP BY e.person_name
-        ORDER BY num_surgeries DESC;
+        SELECT dms.surgery_month, dms.doctor_name, dms.num_surgeries
+        FROM (
+            SELECT to_char(s.surgery_date, 'YYYY-MM') AS surgery_month, e.person_name AS doctor_name, COUNT(s.surgery_id) AS num_surgeries
+            FROM surgeries AS s
+            JOIN employees AS e ON s.doctor_id = e.person_id
+            WHERE s.surgery_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '12 months'
+                AND s.surgery_date < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+            GROUP BY to_char(s.surgery_date, 'YYYY-MM'), e.person_name
+        ) dms
+        JOIN (
+            SELECT surgery_month, MAX(num_surgeries) AS max_surgeries
+            FROM (
+                SELECT to_char(s.surgery_date, 'YYYY-MM') AS surgery_month, e.person_name AS doctor_name, COUNT(s.surgery_id) AS num_surgeries
+                FROM surgeries AS s
+                JOIN employees AS e ON s.doctor_id = e.person_id
+                WHERE s.surgery_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '12 months'
+                    AND s.surgery_date < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+                GROUP BY to_char(s.surgery_date, 'YYYY-MM'), e.person_name
+            ) inner_query
+            GROUP BY surgery_month
+        ) max_surgeries ON dms.surgery_month = max_surgeries.surgery_month AND dms.num_surgeries = max_surgeries.max_surgeries
+        ORDER BY dms.surgery_month;
     """
 
     try:
@@ -1804,8 +2031,9 @@ def get_monthly_surgery_report():
             logger.debug(row)
 
             content = {
-                'doctor_name': row[0],
-                'num_surgeries': row[1]
+                'month': row[0],
+                'doctor_name': row[1],
+                'num_surgeries': row[2]
             }
 
             results.append(content)
@@ -1836,6 +2064,30 @@ def validate_token(jwt_token):
         return None
     except jwt.InvalidTokenError:
         return None
+    
+
+##
+## Validate Date Format
+##
+def validate_date_format(date_string):
+    year, month, day = date_string.split('-')
+    year, month, day = int(year), int(month), int(day)
+
+    # Check if the date is valid
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        return False
+    
+    try:
+        # Tentativa de converter a string para um objeto datetime
+        datetime.strptime(date_string, '%Y-%m-%d')
+        return True
+    except ValueError:
+        return False
+    
+def date_to_str(d):
+    if isinstance(d, datetime):
+        return d.isoformat()
+    return d
     
     
 if __name__ == '__main__':
