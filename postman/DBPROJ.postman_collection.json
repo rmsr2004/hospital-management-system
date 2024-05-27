@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "d0082394-fce2-4f05-a36a-13d24d714950",
+		"_postman_id": "2e443657-b9a5-4e11-a2d7-70ba097bf10a",
 		"name": "DBPROJ",
 		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
 		"_exporter_id": "33217538",
-		"_collection_link": "https://dbprojlei.postman.co/workspace/My-Workspace~b4e92ea3-5b16-4370-869d-e0a3e52a7788/collection/33217538-d0082394-fce2-4f05-a36a-13d24d714950?action=share&source=collection_link&creator=33217538"
+		"_collection_link": "https://dbprojlei.postman.co/workspace/My-Workspace~b4e92ea3-5b16-4370-869d-e0a3e52a7788/collection/33217538-2e443657-b9a5-4e11-a2d7-70ba097bf10a?action=share&source=collection_link&creator=33217538"
 	},
 	"item": [
 		{
@@ -291,7 +291,8 @@
 			"name": "GET DAILY SUMMARY",
 			"request": {
 				"method": "GET",
-				"header": []
+				"header": [],
+				"url": ""
 			},
 			"response": []
 		},
