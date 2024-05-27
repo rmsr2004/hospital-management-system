@@ -741,12 +741,12 @@ def schedule_appointment():
 
         # Query to insert the appointment
         statement =  """
-            INSERT INTO appointments (doctor_id, patient_id, app_date, app_hour, app_minutes, app_type, app_room, app_status, app_duration)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING appointment_id;
+            INSERT INTO appointments (doctor_id, patient_id, app_date, app_hour, app_minutes, app_type, app_room, app_status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING appointment_id;
         """
         values = (
             payload['doctor_id'], jwt_token['user_id'], payload['date'], payload['hour'], payload['minutes'], 
-            payload['type'], payload['room'], 0, 30
+            payload['type'], payload['room'], 0
         )
         cur.execute(statement, values)
 
@@ -1141,8 +1141,8 @@ def shedule_surgery(hospitalization_id=None):
         # Associate the surgery with the hospitalization
         statement = """
             INSERT INTO surgeries (doctor_id, patient_id, surgery_date, surgery_hour, surgery_minutes, surgery_type, surgery_room, 
-                                   surgery_status, hosp_id, surgery_duration)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 120) RETURNING surgery_id;
+                                   surgery_status, hosp_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING surgery_id;
         """
         values = (
             payload['doctor_id'], payload['patient_id'], payload['date'], payload['hour'], payload['minutes'], 
