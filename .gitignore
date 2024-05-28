@@ -2,3 +2,4 @@
 *.log
 python/aux.py
 sql/revoke_all.sql
+python/env
