@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "2e443657-b9a5-4e11-a2d7-70ba097bf10a",
+		"_postman_id": "ea5c5821-851a-4ab3-8a24-fc09ef3a38e2",
 		"name": "DBPROJ",
 		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
 		"_exporter_id": "33217538",
-		"_collection_link": "https://dbprojlei.postman.co/workspace/My-Workspace~b4e92ea3-5b16-4370-869d-e0a3e52a7788/collection/33217538-2e443657-b9a5-4e11-a2d7-70ba097bf10a?action=share&source=collection_link&creator=33217538"
+		"_collection_link": "https://dbprojlei.postman.co/workspace/My-Workspace~b4e92ea3-5b16-4370-869d-e0a3e52a7788/collection/33217538-ea5c5821-851a-4ab3-8a24-fc09ef3a38e2?action=share&source=collection_link&creator=33217538"
 	},
 	"item": [
 		{
@@ -14,7 +14,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"name\": \"irineu\",\t\t/* Nome */\n\t\"cc\": \"74123629\",\t\t/* Cartão de Cidadão */\n\t\"address\": \"Lisboa\",\t/* Morada */\n\t\"phone\": \"12649189\",\t/* Telemóvel */\n\t\"username\": \"irineu25\", /* username */\n\t\"password\": \"1234\",\t\t/* password */\n\t\"email\": \"adsasdasdas@gmail.com\",\t/* email */\n\t\"contract\": {\t\t\t/* Detalhes do Contrato */\n\t\t\"salary\": 1200.00,\t\t/* Salário */\n\t\t\"start_date\": \"2024-12-21\",\t/* Data inicial do contrato */\n\t\t\"final_date\": \"2025-12-21\", /* Data final do contrato */\n\t\t\"ctype_id\": \"3\"\t\t\t/* Tipo de Contrato : [1, 2, 3] */\n\t},\n\t\"medical_license\": {\t\t/* Detalhes da Licença Médica */\n\t\t\"issue_date\": \"2024-12-21\",\t\t/* Data de emissão da Licença Médica */\n\t\t\"expiration_date\": \"2025-12-21\"\t/* Data de expiração da Licença Médica */\n\t}\n}",
+					"raw": "{\n\t\"name\": \"irineu\",\t\t/* Nome */\n\t\"cc\": \"74123629\",\t\t/* Cartão de Cidadão */\n\t\"address\": \"Lisboa\",\t/* Morada */\n\t\"phone\": \"963245449\",\t/* Telemóvel */\n\t\"username\": \"irineu25\", /* username */\n\t\"password\": \"1234\",\t\t/* password */\n\t\"email\": \"adsasdasdas@gmail.com\",\t/* email */\n\t\"contract\": {\t\t\t/* Detalhes do Contrato */\n\t\t\"salary\": 1200.00,\t\t/* Salário */\n\t\t\"start_date\": \"2024-12-21\",\t/* Data inicial do contrato */\n\t\t\"final_date\": \"2025-12-21\", /* Data final do contrato */\n\t\t\"ctype_id\": \"3\"\t\t\t/* Tipo de Contrato : [1, 2, 3] */\n\t},\n\t\"medical_license\": {\t\t/* Detalhes da Licença Médica */\n\t\t\"issue_date\": \"2024-12-21\",\t\t/* Data de emissão da Licença Médica */\n\t\t\"expiration_date\": \"2025-12-21\"\t/* Data de expiração da Licença Médica */\n\t},\n\t\"specialisations\": [\t/* Especializações */\n\t\t[1, 1]\t/* [especializacacao_id, sub_especializacao_id] */\n\t]\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -32,7 +32,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"name\": \"Rodrigo\",\t\t/* Nome */\n\t\"cc\": \"741252963\",\t\t/* Cartão de Cidadão */\n\t\"address\": \"Lisboa\",\t/* Morada */\n\t\"phone\": \"123456789\",\t/* Telemóvel */\n\t\"username\": \"adsjasjdj123\", /* username */\n\t\"password\": \"1234\",\t\t/* password */\n\t\"email\": \"adsasdasdas@gmail.com\",\t/* email */\n\t\"contract\": {\t\t\t/* Detalhes do Contrato */\n\t\t\"salary\": 1200.00,\t\t/* Salário */\n\t\t\"start_date\": \"2024-12-21\",\t/* Data inicial do contrato */\n\t\t\"final_date\": \"2025-12-21\", /* Data final do contrato */\n\t\t\"ctype_id\": \"3\"\t\t\t/* Tipo de Contrato : [1, 2, 3] */\n\t},\n\t\"categories\": [1,2,3] /* Categorias de enfermeira : [1,2,3] */\n}",
+					"raw": "{\n\t\"name\": \"Rodrigo\",\t\t/* Nome */\n\t\"cc\": \"74122963\",\t\t/* Cartão de Cidadão */\n\t\"address\": \"Lisboa\",\t/* Morada */\n\t\"phone\": \"123456789\",\t/* Telemóvel */\n\t\"username\": \"adsjasjdj123\", /* username */\n\t\"password\": \"1234\",\t\t/* password */\n\t\"email\": \"adsasdas@gmail.com\",\t/* email */\n\t\"contract\": {\t\t\t/* Detalhes do Contrato */\n\t\t\"salary\": 1200.00,\t\t/* Salário */\n\t\t\"start_date\": \"2024-12-21\",\t/* Data inicial do contrato */\n\t\t\"final_date\": \"2025-12-21\", /* Data final do contrato */\n\t\t\"ctype_id\": \"3\"\t\t\t/* Tipo de Contrato : [1, 2, 3] */\n\t},\n\t\"categories\": [1,2,3] /* Categorias de enfermeira : [1,2,3] */\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -50,7 +50,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"name\": \"Rodrigo\",\t\t/* Nome */\n\t\"cc\": \"741252963\",\t\t/* Cartão de Cidadão */\n\t\"address\": \"Lisboa\",\t/* Morada */\n\t\"phone\": \"123456789\",\t/* Telemóvel */\n\t\"username\": \"adsjasjdj123\", /* username */\n\t\"password\": \"1234\",\t\t/* password */\n\t\"email\": \"adsasdasdas@gmail.com\",\t/* email */\n\t\"contract\": {\t\t\t/* Detalhes do Contrato */\n\t\t\"salary\": 1200.00,\t\t/* Salário */\n\t\t\"start_date\": \"2024-12-21\",\t/* Data inicial do contrato */\n\t\t\"final_date\": \"2025-12-21\", /* Data final do contrato */\n\t\t\"ctype_id\": \"3\"\t\t\t/* Tipo de Contrato : [1, 2, 3] */\n\t}\n}",
+					"raw": "{\n\t\"name\": \"Rodrigo\",\t\t/* Nome */\n\t\"cc\": \"74125673\",\t\t/* Cartão de Cidadão */\n\t\"address\": \"Lisboa\",\t/* Morada */\n\t\"phone\": \"123456799\",\t/* Telemóvel */\n\t\"username\": \"ads4jasjdj123\", /* username */\n\t\"password\": \"1234\",\t\t/* password */\n\t\"email\": \"ads@gmail.com\",\t/* email */\n\t\"contract\": {\t\t\t/* Detalhes do Contrato */\n\t\t\"salary\": 1200.00,\t\t/* Salário */\n\t\t\"start_date\": \"2024-12-21\",\t/* Data inicial do contrato */\n\t\t\"final_date\": \"2025-12-21\", /* Data final do contrato */\n\t\t\"ctype_id\": \"3\"\t\t\t/* Tipo de Contrato : [1, 2, 3] */\n\t}\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -68,7 +68,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"name\": \"Daniel\",\n\t\"cc\": \"741358923\",\n\t\"address\": \"Vouzela\",\n\t\"phone\": \"983225449\",\n\t\"username\": \"daniel23\",\n\t\"password\": \"12345\",\n\t\"email\": \"daniel2004@gmail.com\"\n}",
+					"raw": "{\n\t\"name\": \"Daniel\",\n\t\"cc\": \"74358923\",\n\t\"address\": \"Vouzela\",\n\t\"phone\": \"983225449\",\n\t\"username\": \"daniel23\",\n\t\"password\": \"12345\",\n\t\"email\": \"daniel2004@gmail.com\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -196,7 +196,7 @@
 						"type": "text"
 					}
 				],
-				"url": ""
+				"url": "http://localhost:8080/dbproj/bills/"
 			},
 			"response": []
 		},
@@ -223,7 +223,7 @@
 						}
 					}
 				},
-				"url": "http://localhost:8080/dbproj/prescription/"
+				"url": "http://localhost:8080/dbproj/prescriptions/"
 			},
 			"response": []
 		},
@@ -250,25 +250,7 @@
 						}
 					}
 				},
-				"url": {
-					"raw": "http://localhost:8080/dbproj/prescription/?",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8080",
-					"path": [
-						"dbproj",
-						"prescription",
-						""
-					],
-					"query": [
-						{
-							"key": "",
-							"value": null
-						}
-					]
-				}
+				"url": "http://localhost:8080/dbproj/prescription/"
 			},
 			"response": []
 		},
@@ -283,7 +265,7 @@
 						"type": "text"
 					}
 				],
-				"url": ""
+				"url": "http://localhost:8080/dbproj/top3"
 			},
 			"response": []
 		},
@@ -292,7 +274,7 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": ""
+				"url": "http://localhost:8080/dbproj/daily/"
 			},
 			"response": []
 		},
